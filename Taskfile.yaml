@@ -9,7 +9,7 @@ includes:
       NESTED_MODULES: ''
       API_DIRS: ''
       MANIFEST_OUT: ''
-      CODE_DIRS: ''
+      CODE_DIRS: '{{.ROOT_DIR}}/cmd/...'
       COMPONENTS: 'bootstrapper'
       REPO_URL: 'https://github.com/openmcp-project/bootstrapper'
       GENERATE_DOCS_INDEX: "true"
