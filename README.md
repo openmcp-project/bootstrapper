@@ -8,7 +8,20 @@ The openmcp bootstrapper is a command line tool that is able to set up an openmc
 
 ## Requirements and Setup
 
-*Insert a short description what is required to get your project running...*
+This project uses the [cobra library](https://github.com/spf13/cobra) for command line parsing.
+To install the `cobra-cli`, call the following command:
+
+```shell
+go install github.com/spf13/cobra-cli@latest
+```
+
+To add a new command, run the following command in the root directory of this project:
+
+```shell
+cobra-cli add <command-name>
+```
+
+See more details in the [cobra-cli documentation](https://github.com/spf13/cobra-cli/blob/main/README.md)
 
 ## Support, Feedback, Contributing
 
