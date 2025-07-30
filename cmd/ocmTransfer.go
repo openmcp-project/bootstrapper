@@ -38,7 +38,7 @@ var ocmTransferCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(ocmTransferCmd)
+	RootCmd.AddCommand(ocmTransferCmd)
 
 	ocmTransferCmd.PersistentFlags().StringP("config", "c", "", "ocm configuration file")
 }

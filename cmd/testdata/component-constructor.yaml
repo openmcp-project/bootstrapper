@@ -1,0 +1,5 @@
+components:
+  - name: github.com/openmcp-project/bootstrapper/test
+    version: v0.0.1
+    provider:
+      name: openmcp-project
