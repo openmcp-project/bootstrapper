@@ -14,3 +14,4 @@ includes:
       REPO_URL: 'https://github.com/openmcp-project/bootstrapper'
       GENERATE_DOCS_INDEX: "true"
       CHART_COMPONENTS: "[]"
+      DOCKERFILE: '{{.ROOT_DIR}}/Dockerfile'
