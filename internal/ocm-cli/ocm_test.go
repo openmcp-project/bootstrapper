@@ -2,12 +2,13 @@ package ocm_cli_test
 
 import (
 	"errors"
-	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 	"k8s.io/utils/ptr"
 
+	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
 	testutil "github.com/openmcp-project/bootstrapper/test/utils"
-	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestExecute(t *testing.T) {

@@ -43,13 +43,23 @@ func DownloadOCMAndAddToPath(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create file: %v", err)
 		}
-		defer out.Close()
+		defer func(out *os.File) {
+			err := out.Close()
+			if err != nil {
+				t.Fatalf("failed to close file: %v", err)
+			}
+		}(out)
 
 		resp, err := http.Get(downloadURL)
 		if err != nil {
 			t.Fatalf("failed to download ocm: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				t.Fatalf("failed to close response body: %v", err)
+			}
+		}(resp.Body)
 
 		_, err = io.Copy(out, resp.Body)
 		if err != nil {
