@@ -8,16 +8,16 @@ import (
 
 // ocmTransferCmd represents the "ocm transfer componentversion" command
 var ocmTransferCmd = &cobra.Command{
-	Use:   "ocmTransfer source destination",
-	Short: "Transfer an OCM component from a source to a destination",
-	Long:  `Transfers the specified OCM component version from the source location to the destination location.`,
+	Use:   "ocmTransfer source target",
+	Short: "Transfer an OCM component from a source to a target location",
+	Long:  `Transfers the specified OCM component version from the source location to the target location.`,
 	Aliases: []string{
 		"transfer",
 	},
 	Args: cobra.ExactArgs(2),
 	ArgAliases: []string{
 		"source",
-		"destination",
+		"target",
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		transferCommands := []string{
@@ -30,7 +30,7 @@ var ocmTransferCmd = &cobra.Command{
 			"--copy-resources",
 			"--copy-sources",
 			args[0], // source
-			args[1], // destination
+			args[1], // target
 		}
 
 		return ocmcli.Execute(cmd.Context(), transferCommands, transferArgs, cmd.Flag("config").Value.String())
