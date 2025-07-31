@@ -84,7 +84,18 @@ func DownloadOCMAndAddToPath(t *testing.T) {
 			t.Fatalf("failed to chmod ocm binary: %v", err)
 		}
 
-		if err := os.Symlink(ocmPath, filepath.Join(cacheDir, "ocm")); err != nil {
+		// if symlink already exists, remove it
+		symlinkPath := filepath.Join(cacheDir, "ocm")
+		if _, err := os.Lstat(symlinkPath); err == nil {
+			if err := os.Remove(symlinkPath); err != nil {
+				t.Fatalf("failed to remove existing symlink: %v", err)
+			}
+		} else if !os.IsNotExist(err) {
+			t.Fatalf("failed to check existing symlink: %v", err)
+		}
+
+		// create symlink to the ocm binary
+		if err := os.Symlink(ocmPath, symlinkPath); err != nil {
 			t.Fatalf("failed to create symlink for ocm binary: %v", err)
 		}
 	} else {
