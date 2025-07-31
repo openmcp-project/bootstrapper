@@ -26,7 +26,7 @@ openmcp-bootstrapper ocmTransfer <source-location> <target-location> --config <p
 This command internally calls the OCM cli with the following command and arguments:
 
 ```shell
-ocm --config <path-to-ocm-config> transfer componentversion --recursive --copy-resources --copy-sources <source-location> <destination-location>
+ocm --config <path-to-ocm-config> transfer componentversion --recursive --copy-resources --copy-sources <source-location> <target-location>
 ```
 
 Example:
