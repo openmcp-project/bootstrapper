@@ -1,10 +1,41 @@
 [![REUSE status](https://api.reuse.software/badge/github.com/openmcp-project/bootstrapper)](https://api.reuse.software/info/github.com/openmcp-project/bootstrapper)
 
-# bootstrapper
+# openmcp bootstrapper
 
 ## About this project
 
 The openmcp bootstrapper is a command line tool that is able to set up an openmcp landscape initially and to update existing openmcp landscapes with new versions of the openmcp project.
+
+Supported commands:
+* `ocmTransfer`: Transfers the specified OCM component version from the source location to the destination location.
+
+### `ocmTransfer`
+
+The `ocmTransfer` command is used to transfer an OCM component version from a source location to a destination location.
+The `ocmTransfer` requires the following parameters:
+* `source`: The source location of the OCM component version to be transferred.
+* `destination`: The destination location where the OCM component version should be transferred to.
+
+Optional parameters:
+* `--config`: Path to the OCM configuration file.
+
+```shell
+bootstrapper ocmTransfer --source <source-location> --destination <destination-location> --config <path-to-ocm-config>
+```
+
+This command internally calls the OCM cli with the following command and arguments:
+
+```shell
+ocm transfer componentversion --recursive --copy-resources --copy-sources <source-location> <destination-location> --config <path-to-ocm-config>
+```
+
+Example:
+```shell
+ocmTransfer ghcr.io/openmcp-project/components//github.com/openmcp-project/openmcp:v0.0.11 ./ctf
+ocmTransfer ghcr.io/openmcp-project/components//github.com/openmcp-project/openmcp:v0.0.11 ghcr.io/my-github-user
+```
+
+
 
 ## Requirements and Setup
 
