@@ -3,9 +3,10 @@ package ocm_cli
 import (
 	"context"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"os"
 	"os/exec"
+
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -19,16 +20,16 @@ const (
 // The `args` parameter is a slice of strings representing the arguments to the command.
 // The `ocmConfig` parameter is a string representing the path to the OCM configuration file. Passing `NoOcmConfig` indicates that no configuration file should be used.
 func Execute(ctx context.Context, commands []string, args []string, ocmConfig string) error {
-	var flags []string
-
-	flags = append(flags, commands...)
-	flags = append(flags, args...)
+	var ocmArgs []string
 
 	if ocmConfig != NoOcmConfig {
-		flags = append(flags, "--config", ocmConfig)
+		ocmArgs = append(ocmArgs, "--config", ocmConfig)
 	}
 
-	cmd := exec.CommandContext(ctx, "ocm", flags...)
+	ocmArgs = append(ocmArgs, commands...)
+	ocmArgs = append(ocmArgs, args...)
+
+	cmd := exec.CommandContext(ctx, "ocm", ocmArgs...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -52,43 +53,47 @@ type ComponentVersion struct {
 // Component represents an OCM component with its name, version, references to other components, and resources.
 type Component struct {
 	// Name is the name of the component.
-	Name string `yaml:"name"`
+	Name string `json:"name"`
 	// Version is the version of the component.
-	Version string `yaml:"version"`
+	Version string `json:"version"`
 	// ComponentReferences is a list of references to other components that this component depends on.
 	ComponentReferences []ComponentReference `yaml:"componentReferences"`
 	// Resources is a list of resources associated with this component, including their names, versions, types, and access information.
-	Resources []Resource `yaml:"resources"`
+	Resources []Resource `json:"resources"`
 }
 
 // ComponentReference represents a reference to another component, including its name, version, and the name of the component it refers to.
 type ComponentReference struct {
 	// Name is the name of the component reference.
-	Name string `yaml:"name"`
+	Name string `json:"name"`
 	// Version is the version of the component reference.
-	Version string `yaml:"version"`
+	Version string `json:"version"`
 	// ComponentName is the name of the component that this reference points to.
-	ComponentName string `yaml:"componentName"`
+	ComponentName string `json:"componentName"`
 }
 
 // Resource represents a resource associated with a component, including its name, version, type, and access information.
 type Resource struct {
 	// Name is the name of the resource.
-	Name string `yaml:"name"`
+	Name string `json:"name"`
 	// Version is the version of the resource.
-	Version string `yaml:"version"`
+	Version string `json:"version"`
 	// Type is the content type of the resource.
-	Type string `yaml:"type"`
+	Type string `json:"type"`
 	// Access contains the information on how to access the resource.
-	Access Access `yaml:"access"`
+	Access Access `json:"access"`
 }
 
 // Access represents the access information for a resource, including the type of access.
 type Access struct {
-	// Type is the content type of access to the resource.
-	Type string `yaml:"type"`
+	// Type specifies the access type of the resource.
+	Type string `json:"type"`
 	// ImageReference is the reference to the image if the Type is "ociArtifact".
-	ImageReference string `yaml:"imageReference"`
+	ImageReference *string `json:"imageReference"`
+	// LocalReference specifies a component local access
+	LocalReference *string `json:"localReference"`
+	// MediaType is the media type of the resource
+	MediaType *string `json:"mediaType"`
 }
 
 // GetResource retrieves a resource by its name from the component version.
@@ -113,21 +118,18 @@ func (cv *ComponentVersion) GetComponentReference(name string) (*ComponentRefere
 
 // GetComponentVersion retrieves a component version by its reference using the OCM CLI.
 func GetComponentVersion(ctx context.Context, componentReference string, ocmConfig string) (*ComponentVersion, error) {
-	flags := []string{
-		"get",
-		"componentversion",
-		"--output", "yaml",
-		componentReference,
-	}
+	var ocmArgs []string
 
 	if ocmConfig != NoOcmConfig {
-		flags = append(flags, "--config", ocmConfig)
+		ocmArgs = append(ocmArgs, "--config", ocmConfig)
 	}
 
-	cmd := exec.CommandContext(ctx, "ocm", flags...)
+	ocmArgs = append(ocmArgs, "get", "componentversion", "--output", "yaml", componentReference)
+
+	cmd := exec.CommandContext(ctx, "ocm", ocmArgs...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("error executing ocm command: %w", err)
+		return nil, fmt.Errorf("error executing ocm command: %w, %q", err, out)
 	}
 
 	var cv ComponentVersion

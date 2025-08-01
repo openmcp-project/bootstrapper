@@ -15,45 +15,98 @@ const (
 	OCM_VERSION = "0.27.0"
 )
 
+var (
+	CacheDirRoot = filepath.Join(os.TempDir(), "openmcp-bootstrapper-test")
+)
+
 // DownloadOCMAndAddToPath downloads the OCM cli for the current platform and puts it to the PATH of the test
 func DownloadOCMAndAddToPath(t *testing.T) {
 	t.Helper()
 
-	downloadURL := "https://github.com/open-component-model/ocm/releases/download/v" +
-		OCM_VERSION + "/ocm-" + OCM_VERSION + "-" + runtime.GOOS + "-" + runtime.GOARCH + ".tar.gz"
+	cacheDir := filepath.Join(CacheDirRoot, "ocm-cli-cache")
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		t.Fatalf("failed to create cache dir: %v", err)
+	}
 
-	tempDir := t.TempDir()
-	archivePath := filepath.Join(tempDir, "ocm.tar.gz")
-	out, err := os.Create(archivePath)
+	ocmBinaryName := "ocm-" + OCM_VERSION + "-" + runtime.GOOS + "-" + runtime.GOARCH
+	ocmPath := filepath.Join(cacheDir, ocmBinaryName)
+
+	if _, err := os.Stat(ocmPath); os.IsNotExist(err) {
+		t.Log("Downloading OCM as it is not present in the cache directory, starting download...")
+
+		downloadURL := "https://github.com/open-component-model/ocm/releases/download/v" +
+			OCM_VERSION + "/ocm-" + OCM_VERSION + "-" + runtime.GOOS + "-" + runtime.GOARCH + ".tar.gz"
+
+		tempDir := t.TempDir()
+		archivePath := filepath.Join(tempDir, "ocm.tar.gz")
+		out, err := os.Create(archivePath)
+		if err != nil {
+			t.Fatalf("failed to create file: %v", err)
+		}
+		defer func(out *os.File) {
+			err := out.Close()
+			if err != nil {
+				t.Fatalf("failed to close file: %v", err)
+			}
+		}(out)
+
+		resp, err := http.Get(downloadURL)
+		if err != nil {
+			t.Fatalf("failed to download ocm: %v", err)
+		}
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				t.Fatalf("failed to close response body: %v", err)
+			}
+		}(resp.Body)
+
+		_, err = io.Copy(out, resp.Body)
+		if err != nil {
+			t.Fatalf("failed to save ocm: %v", err)
+		}
+
+		// Extract the tar.gz
+		cmd := exec.Command("tar", "-xzf", archivePath, "-C", tempDir)
+		if err := cmd.Run(); err != nil {
+			t.Fatalf("failed to extract ocm: %v", err)
+		}
+
+		// Move the ocm binary to the cache dir
+		binPath := filepath.Join(tempDir, "ocm")
+		if _, err := os.Stat(binPath); err != nil {
+			t.Fatalf("ocm binary not found after extraction: %v", err)
+		}
+		if err := os.Rename(binPath, ocmPath); err != nil {
+			t.Fatalf("failed to move ocm binary to cache: %v", err)
+		}
+		if err := os.Chmod(ocmPath, 0o755); err != nil {
+			t.Fatalf("failed to chmod ocm binary: %v", err)
+		}
+
+		// if symlink already exists, remove it
+		symlinkPath := filepath.Join(cacheDir, "ocm")
+		if _, err := os.Lstat(symlinkPath); err == nil {
+			if err := os.Remove(symlinkPath); err != nil {
+				t.Fatalf("failed to remove existing symlink: %v", err)
+			}
+		} else if !os.IsNotExist(err) {
+			t.Fatalf("failed to check existing symlink: %v", err)
+		}
+
+		// create symlink to the ocm binary
+		if err := os.Symlink(ocmPath, symlinkPath); err != nil {
+			t.Fatalf("failed to create symlink for ocm binary: %v", err)
+		}
+	} else {
+		t.Log("OCM binary already exists in the cache directory, skipping download.")
+	}
+
+	// Prepend the cache dir to PATH
+	err := os.Setenv("PATH", cacheDir+":"+os.Getenv("PATH"))
 	if err != nil {
-		t.Fatalf("failed to create file: %v", err)
+		t.Fatalf("failed to set PATH environment variable: %v", err)
 	}
-	defer out.Close()
-
-	resp, err := http.Get(downloadURL)
-	if err != nil {
-		t.Fatalf("failed to download ocm: %v", err)
-	}
-	defer resp.Body.Close()
-
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		t.Fatalf("failed to save ocm: %v", err)
-	}
-
-	// Extract the tar.gz
-	cmd := exec.Command("tar", "-xzf", archivePath, "-C", tempDir)
-	if err := cmd.Run(); err != nil {
-		t.Fatalf("failed to extract ocm: %v", err)
-	}
-
-	// Find the ocm binary
-	ocmPath := filepath.Join(tempDir, "ocm")
-	if _, err := os.Stat(ocmPath); err != nil {
-		t.Fatalf("ocm binary not found after extraction: %v", err)
-	}
-
-	t.Setenv("PATH", tempDir+":"+os.Getenv("PATH"))
 }
 
 // BuildComponent builds the component for the specified componentConstructorLocation and returns the ctf out directory.

@@ -1,0 +1,21 @@
+components:
+  - name: github.com/openmcp-project/bootstrapper/test
+    version: v0.0.1
+    provider:
+      name: openmcp-project
+
+    componentReferences:
+      - componentName: github.com/openmcp-project/bootstrapper-dependency-a
+        name: bootstrapper-dependency-a
+        version: v0.2.0
+
+      - componentName: github.com/openmcp-project/bootstrapper-dependency-b
+        name: bootstrapper-dependency-b
+        version: v0.3.0
+
+    resources:
+      - name: test-resource
+        type: blob
+        input:
+          type: file
+          path: ./test-resource.yaml
