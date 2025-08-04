@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"sigs.k8s.io/yaml"
 )
@@ -24,6 +25,10 @@ func Execute(ctx context.Context, commands []string, args []string, ocmConfig st
 
 	if ocmConfig != NoOcmConfig {
 		ocmArgs = append(ocmArgs, "--config", ocmConfig)
+
+		if err := verifyOCMConfig(ocmConfig); err != nil {
+			return fmt.Errorf("invalid OCM configuration: %w", err)
+		}
 	}
 
 	ocmArgs = append(ocmArgs, commands...)
@@ -122,6 +127,10 @@ func GetComponentVersion(ctx context.Context, componentReference string, ocmConf
 
 	if ocmConfig != NoOcmConfig {
 		ocmArgs = append(ocmArgs, "--config", ocmConfig)
+
+		if err := verifyOCMConfig(ocmConfig); err != nil {
+			return nil, fmt.Errorf("invalid OCM configuration: %w", err)
+		}
 	}
 
 	ocmArgs = append(ocmArgs, "get", "componentversion", "--output", "yaml", componentReference)
@@ -139,4 +148,53 @@ func GetComponentVersion(ctx context.Context, componentReference string, ocmConf
 	}
 
 	return &cv, nil
+}
+
+type OCMConfiguration struct {
+	Type           string                        `json:"type"`
+	Configurations []TypedOCMConfigConfiguration `json:"configurations"`
+}
+
+type TypedOCMConfigConfiguration struct {
+	Type         string                `json:"type"`
+	Repositories []OCMConfigRepository `json:"repositories"`
+}
+
+type OCMConfigRepository struct {
+	Repository *TypedOCMConfigRepository `json:"repository"`
+}
+
+type TypedOCMConfigRepository struct {
+	Type string `json:"type"`
+}
+
+const (
+	DockerConfigRepositoryType = "DockerConfig"
+)
+
+// verifyOCMConfig checks if the OCM configuration file exists and does not contain unsupported configuration.
+func verifyOCMConfig(ocmConfig string) error {
+	if _, err := os.Stat(ocmConfig); os.IsNotExist(err) {
+		return fmt.Errorf("OCM configuration file does not exist: %s", ocmConfig)
+	}
+
+	file, err := os.ReadFile(ocmConfig)
+	if err != nil {
+		return fmt.Errorf("error reading OCM configuration file: %w", err)
+	}
+
+	var config OCMConfiguration
+	if err = yaml.Unmarshal(file, &config); err != nil {
+		return fmt.Errorf("error unmarshalling OCM configuration file: %w", err)
+	}
+
+	for _, typedConfig := range config.Configurations {
+		for _, repo := range typedConfig.Repositories {
+			if repo.Repository != nil && strings.Contains(repo.Repository.Type, DockerConfigRepositoryType) {
+				return fmt.Errorf("unsupported repository type: %s", repo.Repository.Type)
+			}
+		}
+	}
+
+	return nil
 }

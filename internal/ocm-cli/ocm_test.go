@@ -46,6 +46,14 @@ func TestExecute(t *testing.T) {
 			ocmConfig:     "./testdata/ocm-config.yaml",
 			expectedError: nil,
 		},
+
+		{
+			desc:          "get componentversion with unsupported ocm config",
+			commands:      []string{"get", "componentversion"},
+			arguments:     []string{"--output", "yaml", ctfIn},
+			ocmConfig:     "./testdata/unsupported-ocm-config.yaml",
+			expectedError: expectError,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -113,6 +121,12 @@ func TestGetComponentVersion(t *testing.T) {
 			componentRef:  ctfIn,
 			ocmConfig:     "./testdata/ocm-config.yaml",
 			expectedError: nil,
+		},
+		{
+			desc:          "get component version with unsupported ocm config",
+			componentRef:  ctfIn,
+			ocmConfig:     "./testdata/unsupported-ocm-config.yaml",
+			expectedError: expectError,
 		},
 		{
 			desc:          "get component version with invalid reference",
