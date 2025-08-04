@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -167,25 +166,22 @@ func getOCMVersion(t *testing.T) string {
 
 		currentDir = parent
 	}
-	OCMVersion, err = parseDockerfileOCMVersion(dockerfilePath)
-	if err != nil {
-		t.Fatalf("failed to parse OCM_VERSION from Dockerfile: %v", err)
-	}
+	OCMVersion = parseDockerfileOCMVersion(dockerfilePath, t)
 
 	t.Logf("Parsed OCM_VERSION from Dockerfile: %s", OCMVersion)
 	return OCMVersion
 }
 
 // ParseDockerfileOCMVersion parses the Dockerfile to extract the OCM_VERSION argument value.
-func parseDockerfileOCMVersion(dockerfilePath string) (string, error) {
+func parseDockerfileOCMVersion(dockerfilePath string, t *testing.T) string {
 	file, err := os.Open(dockerfilePath)
 	if err != nil {
-		return "", err
+		t.Fatalf("failed to open Dockerfile: %v", err)
 	}
 	defer func(file *os.File) {
 		err := file.Close()
 		if err != nil {
-
+			t.Fatalf("failed to close Dockerfile: %v", err)
 		}
 	}(file)
 
@@ -195,11 +191,13 @@ func parseDockerfileOCMVersion(dockerfilePath string) (string, error) {
 		line := scanner.Text()
 		matches := re.FindStringSubmatch(line)
 		if len(matches) == 2 {
-			return matches[1], nil
+			return matches[1]
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		return "", err
+	if err = scanner.Err(); err != nil {
+		t.Fatalf("failed to read Dockerfile: %v", err)
 	}
-	return "", fmt.Errorf("OCM_VERSION not found in Dockerfile")
+
+	t.Fatalf("OCM_VERSION not found in Dockerfile: %s", dockerfilePath)
+	return ""
 }
