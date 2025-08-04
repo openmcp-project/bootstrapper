@@ -1,41 +1,42 @@
 package utils
 
 import (
+	"bufio"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"testing"
 )
 
-const (
-	// renovate: datasource=github-releases depName=ocm packageName=open-component-model/ocm
-	OCM_VERSION = "0.27.0"
-)
-
 var (
 	CacheDirRoot = filepath.Join(os.TempDir(), "openmcp-bootstrapper-test")
+	OCMVersion   = ""
 )
 
 // DownloadOCMAndAddToPath downloads the OCM cli for the current platform and puts it to the PATH of the test
 func DownloadOCMAndAddToPath(t *testing.T) {
 	t.Helper()
 
+	ocmVersion := getOCMVersion(t)
+
 	cacheDir := filepath.Join(CacheDirRoot, "ocm-cli-cache")
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		t.Fatalf("failed to create cache dir: %v", err)
 	}
 
-	ocmBinaryName := "ocm-" + OCM_VERSION + "-" + runtime.GOOS + "-" + runtime.GOARCH
+	ocmBinaryName := "ocm-" + ocmVersion + "-" + runtime.GOOS + "-" + runtime.GOARCH
 	ocmPath := filepath.Join(cacheDir, ocmBinaryName)
 
 	if _, err := os.Stat(ocmPath); os.IsNotExist(err) {
 		t.Log("Downloading OCM as it is not present in the cache directory, starting download...")
 
 		downloadURL := "https://github.com/open-component-model/ocm/releases/download/v" +
-			OCM_VERSION + "/ocm-" + OCM_VERSION + "-" + runtime.GOOS + "-" + runtime.GOARCH + ".tar.gz"
+			ocmVersion + "/ocm-" + ocmVersion + "-" + runtime.GOOS + "-" + runtime.GOARCH + ".tar.gz"
 
 		tempDir := t.TempDir()
 		archivePath := filepath.Join(tempDir, "ocm.tar.gz")
@@ -129,4 +130,76 @@ func BuildComponent(componentConstructorLocation string, t *testing.T) string {
 	}
 
 	return ctfDir
+}
+
+func getOCMVersion(t *testing.T) string {
+	var err error
+
+	if OCMVersion != "" {
+		t.Logf("Using cached OCM_VERSION: %s", OCMVersion)
+		return OCMVersion
+	}
+
+	// Find the parent directory containing the Dockerfile
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %v", err)
+	}
+
+	var (
+		dockerfilePath string
+		currentDir     = cwd
+	)
+
+	for {
+		dockerfilePath = filepath.Join(currentDir, "Dockerfile")
+		if _, err = os.Stat(dockerfilePath); err == nil {
+			break
+		} else {
+			if !os.IsNotExist(err) {
+				t.Fatalf("failed to check Dockerfile existence: %v", err)
+			}
+		}
+		parent := filepath.Dir(currentDir)
+		if parent == currentDir {
+			t.Fatalf("Dockerfile not found in any parent directory of %s", cwd)
+		}
+
+		currentDir = parent
+	}
+	OCMVersion, err = parseDockerfileOCMVersion(dockerfilePath)
+	if err != nil {
+		t.Fatalf("failed to parse OCM_VERSION from Dockerfile: %v", err)
+	}
+
+	t.Logf("Parsed OCM_VERSION from Dockerfile: %s", OCMVersion)
+	return OCMVersion
+}
+
+// ParseDockerfileOCMVersion parses the Dockerfile to extract the OCM_VERSION argument value.
+func parseDockerfileOCMVersion(dockerfilePath string) (string, error) {
+	file, err := os.Open(dockerfilePath)
+	if err != nil {
+		return "", err
+	}
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
+
+	scanner := bufio.NewScanner(file)
+	re := regexp.MustCompile(`^ARG OCM_VERSION=([\w.-]+)`)
+	for scanner.Scan() {
+		line := scanner.Text()
+		matches := re.FindStringSubmatch(line)
+		if len(matches) == 2 {
+			return matches[1], nil
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+	return "", fmt.Errorf("OCM_VERSION not found in Dockerfile")
 }
