@@ -3,21 +3,7 @@ package template
 import (
 	"bytes"
 	gotmpl "text/template"
-
-	"github.com/Masterminds/sprig/v3"
 )
-
-func templateFuncMap() []gotmpl.FuncMap {
-	sprigFm := sprig.FuncMap()
-
-	fm := gotmpl.FuncMap{
-		"hello": func(name string) string {
-			return "Hello, " + name + "!"
-		},
-	}
-
-	return []gotmpl.FuncMap{sprigFm, fm}
-}
 
 type TemplateExecution struct {
 	funcMaps               []gotmpl.FuncMap
@@ -27,7 +13,7 @@ type TemplateExecution struct {
 
 func NewTemplateExecution() *TemplateExecution {
 	t := &TemplateExecution{
-		funcMaps:               templateFuncMap(),
+		funcMaps:               make([]gotmpl.FuncMap, 0),
 		templateInputFormatter: NewTemplateInputFormatter(true),
 		missingKeyOption:       "error",
 	}
