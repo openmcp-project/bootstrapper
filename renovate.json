@@ -42,8 +42,7 @@
       "description": "All component dependencies in other locations.",
       "customType": "regex",
       "managerFilePatterns": [
-        "/Dockerfile/",
-        "/test/utils/ocm.go"
+        "/Dockerfile/"
       ],
       "matchStrings": [
         "renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: (lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?(?: registryUrl=(?<registryUrl>[^\\s]+?))?\\s.+?(_version|_VERSION)( |)=( |)(\"|)(?<currentValue>.+?)(\"|)?\\s"
