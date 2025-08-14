@@ -1,0 +1,13 @@
+component:
+  name: github.com/openmcp-project/openmcp
+  version: v0.0.1
+  resources:
+    - name: fluxcd-source-controller
+      access:
+        imageReference: "test-source-controller-image:v0.0.1"
+    - name: fluxcd-helm-controller
+      access:
+        imageReference: "test-helm-controller-image:v0.0.1"
+    - name: fluxcd-kustomize-controller
+      access:
+        imageReference: "test-kustomize-controller-image:v0.0.1"
