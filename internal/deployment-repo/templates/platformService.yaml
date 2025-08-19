@@ -1,0 +1,21 @@
+apiVersion: openmcp.cloud/v1alpha1
+kind: PlatformService
+metadata:
+  name: "{{ .values.name }}"
+spec:
+  image: "{{ .values.image.location }}"
+{{- if dig "image" "imagePullSecrets" "" .values }}
+  imagePullSecrets:
+{{- range $index, $value := .values.image.imagePullSecrets }}
+    - name: "{{ $value }}"
+{{- end }}
+{{- end }}
+{{- if dig "env" "" .values }}
+  env:
+{{- range $key, $value := .values.env }}
+    {{ $key }}: {{ $value }}
+{{- end }}
+{{- end }}
+{{- if dig "verbosity" "" .values }}
+  verbosity: {{ .values.verbosity }}
+{{- end }}

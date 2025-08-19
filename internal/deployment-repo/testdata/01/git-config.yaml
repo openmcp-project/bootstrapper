@@ -1,0 +1,4 @@
+auth:
+  basic:
+    username: user
+    password: pass

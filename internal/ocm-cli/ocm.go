@@ -52,7 +52,8 @@ func Execute(ctx context.Context, commands []string, args []string, ocmConfig st
 // ComponentVersion represents a version of an OCM component.
 type ComponentVersion struct {
 	// Component is the OCM component associated with this version.
-	Component Component `json:"component"`
+	Component  Component `json:"component"`
+	Repository string    `json:"repository,omitempty"`
 }
 
 // Component represents an OCM component with its name, version, references to other components, and resources.
@@ -101,6 +102,10 @@ type Access struct {
 	MediaType *string `json:"mediaType"`
 }
 
+var (
+	OCIImageResourceType = "ociImage"
+)
+
 // GetResource retrieves a resource by its name from the component version.
 func (cv *ComponentVersion) GetResource(name string) (*Resource, error) {
 	for _, resource := range cv.Component.Resources {
@@ -109,6 +114,16 @@ func (cv *ComponentVersion) GetResource(name string) (*Resource, error) {
 		}
 	}
 	return nil, fmt.Errorf("resource %s not found in component version %s", name, cv.Component.Name)
+}
+
+func (cv *ComponentVersion) GetResourcesByType(resourceType string) []Resource {
+	var resources []Resource
+	for _, resource := range cv.Component.Resources {
+		if resource.Type == resourceType {
+			resources = append(resources, resource)
+		}
+	}
+	return resources
 }
 
 // GetComponentReference retrieves a component reference by its name from the component version.
@@ -146,6 +161,8 @@ func GetComponentVersion(ctx context.Context, componentReference string, ocmConf
 	if err != nil {
 		return nil, fmt.Errorf("error unmarshalling component version: %w", err)
 	}
+
+	cv.Repository = strings.SplitN(componentReference, "//", 2)[0]
 
 	return &cv, nil
 }
