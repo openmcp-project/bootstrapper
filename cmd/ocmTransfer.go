@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/openmcp-project/bootstrapper/internal/log"
 	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
 
 	"github.com/spf13/cobra"
@@ -20,6 +21,10 @@ var ocmTransferCmd = &cobra.Command{
 		"target",
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		log := log.GetLogger()
+
+		log.Debugf("Executing ocmTransfer with source: %s, target: %s", args[0], args[1])
+
 		transferCommands := []string{
 			"transfer",
 			"componentversion",

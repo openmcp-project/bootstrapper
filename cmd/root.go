@@ -3,10 +3,11 @@ package cmd
 import (
 	"os"
 
+	"github.com/openmcp-project/bootstrapper/internal/log"
 	"github.com/spf13/cobra"
 )
 
-// rootCmd represents the base command when called without any subcommands
+// RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "openmcp-bootstrapper",
 	Short: "The openMCP bootstrapper CLI",
@@ -27,13 +28,13 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.bootstrapper.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	// RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	RootCmd.PersistentFlags().StringP("verbosity", "v", "info", "Set the verbosity level (panic, fatal, error, warn, info, debug, trace)")
+	cobra.OnInitialize(func() {
+		verbosity, err := RootCmd.PersistentFlags().GetString("verbosity")
+		if err != nil {
+			log.InitLogger("info")
+			return
+		}
+		log.InitLogger(verbosity)
+	})
 }
