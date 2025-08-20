@@ -48,6 +48,18 @@ type SSHPrivateKey struct {
 	KnownHosts string `json:"knownHosts,omitempty"`
 }
 
+// DecodePrivateKey decodes the base64 encoded SSH private key.
+func (s *SSHPrivateKey) DecodePrivateKey() ([]byte, error) {
+	if s.PrivateKey == "" {
+		return nil, fmt.Errorf("SSH private key is empty")
+	}
+	privateKeyDecoded, err := base64.StdEncoding.DecodeString(s.PrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode SSH private key: %w", err)
+	}
+	return privateKeyDecoded, nil
+}
+
 // ParseConfig reads a YAML configuration file and returns a Config object.
 func ParseConfig(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
@@ -134,9 +146,9 @@ func (c *Config) configureAuth() (auth transport.AuthMethod, err error) {
 	}
 
 	if c.Authentication.SSHPrivateKey != nil {
-		privateKeyDecoded, err := base64.StdEncoding.DecodeString(c.Authentication.SSHPrivateKey.PrivateKey)
+		privateKeyDecoded, err := c.Authentication.SSHPrivateKey.DecodePrivateKey()
 		if err != nil {
-			return nil, fmt.Errorf("failed to decode SSH private key: %w", err)
+			return nil, err
 		}
 
 		publicKeys, err := ssh.NewPublicKeys("git", privateKeyDecoded, "")
