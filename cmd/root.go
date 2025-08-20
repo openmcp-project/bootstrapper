@@ -3,8 +3,9 @@ package cmd
 import (
 	"os"
 
-	"github.com/openmcp-project/bootstrapper/internal/log"
 	"github.com/spf13/cobra"
+
+	"github.com/openmcp-project/bootstrapper/internal/log"
 )
 
 // RootCmd represents the base command when called without any subcommands
