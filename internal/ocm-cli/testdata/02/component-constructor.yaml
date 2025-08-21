@@ -1,26 +1,41 @@
 components:
 
-  - name: github.com/openmcp-project/openmcp
-    version: v0.0.11
+  - name: github.com/openmcp-project/bootstrapper/test-component-getter-a
+    version: v0.0.1
     provider:
       name: openmcp-project
     componentReferences:
-      - componentName: github.com/openmcp-project/gitops-templates
-        name: gitops-templates
+      - componentName: github.com/openmcp-project/bootstrapper/test-component-getter-b
+        name: reference-b
         version: v0.0.1
     resources:
-      - name: test-resource
+      - name: test-resource-a
         type: blob
         input:
           type: file
           path: ./test-resource.yaml
 
-  - name: github.com/openmcp-project/gitops-templates
+  - name: github.com/openmcp-project/bootstrapper/test-component-getter-b
+    version: v0.0.1
+    provider:
+      name: openmcp-project
+    componentReferences:
+      - componentName: github.com/openmcp-project/bootstrapper/test-component-getter-c
+        name: reference-c
+        version: v0.0.1
+    resources:
+      - name: test-resource-b
+        type: blob
+        input:
+          type: file
+          path: ./test-resource.yaml
+
+  - name: github.com/openmcp-project/bootstrapper/test-component-getter-c
     version: v0.0.1
     provider:
       name: openmcp-project
     resources:
-      - name: test-resource
+      - name: test-resource-c
         type: blob
         input:
           type: file

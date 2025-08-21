@@ -69,6 +69,10 @@ func (g *ComponentGetter) TemplatesComponentVersion() *ComponentVersion {
 	return g.templatesComponentVersion
 }
 
+func (g *ComponentGetter) TemplatesResourceName() string {
+	return g.templatesResourceName
+}
+
 func getReferencedComponentVersion(ctx context.Context, repo string, parentCV *ComponentVersion, refName string, ocmConfig string) (*ComponentVersion, error) {
 	ref, err := parentCV.GetComponentReference(refName)
 	if err != nil {
