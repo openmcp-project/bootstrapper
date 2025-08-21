@@ -1,0 +1,27 @@
+components:
+
+  - name: github.com/openmcp-project/openmcp
+    version: v0.0.11
+    provider:
+      name: openmcp-project
+    componentReferences:
+      - componentName: github.com/openmcp-project/gitops-templates
+        name: gitops-templates
+        version: v0.0.1
+    resources:
+      - name: test-resource
+        type: blob
+        input:
+          type: file
+          path: ./test-resource.yaml
+
+  - name: github.com/openmcp-project/gitops-templates
+    version: v0.0.1
+    provider:
+      name: openmcp-project
+    resources:
+      - name: test-resource
+        type: blob
+        input:
+          type: file
+          path: ./test-resource.yaml

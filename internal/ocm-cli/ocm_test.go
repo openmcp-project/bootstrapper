@@ -16,7 +16,7 @@ func TestExecute(t *testing.T) {
 
 	testutil.DownloadOCMAndAddToPath(t)
 
-	ctfIn := testutil.BuildComponent("./testdata/component-constructor.yaml", t)
+	ctfIn := testutil.BuildComponent("./testdata/01/component-constructor.yaml", t)
 
 	testCases := []struct {
 		desc          string
@@ -43,7 +43,7 @@ func TestExecute(t *testing.T) {
 			desc:          "get componentversion with ocm config",
 			commands:      []string{"get", "componentversion"},
 			arguments:     []string{"--output", "yaml", ctfIn},
-			ocmConfig:     "./testdata/ocm-config.yaml",
+			ocmConfig:     "./testdata/01/ocm-config.yaml",
 			expectedError: nil,
 		},
 
@@ -51,7 +51,7 @@ func TestExecute(t *testing.T) {
 			desc:          "get componentversion with unsupported ocm config",
 			commands:      []string{"get", "componentversion"},
 			arguments:     []string{"--output", "yaml", ctfIn},
-			ocmConfig:     "./testdata/unsupported-ocm-config.yaml",
+			ocmConfig:     "./testdata/01/unsupported-ocm-config.yaml",
 			expectedError: expectError,
 		},
 	}
@@ -73,7 +73,7 @@ func TestGetComponentVersion(t *testing.T) {
 	expectError := errors.New("expected error")
 	testutil.DownloadOCMAndAddToPath(t)
 
-	ctfIn := testutil.BuildComponent("./testdata/component-constructor.yaml", t)
+	ctfIn := testutil.BuildComponent("./testdata/01/component-constructor.yaml", t)
 
 	testCases := []struct {
 		desc          string
@@ -119,13 +119,13 @@ func TestGetComponentVersion(t *testing.T) {
 		{
 			desc:          "get component version with ocm config",
 			componentRef:  ctfIn,
-			ocmConfig:     "./testdata/ocm-config.yaml",
+			ocmConfig:     "./testdata/01/ocm-config.yaml",
 			expectedError: nil,
 		},
 		{
 			desc:          "get component version with unsupported ocm config",
 			componentRef:  ctfIn,
-			ocmConfig:     "./testdata/unsupported-ocm-config.yaml",
+			ocmConfig:     "./testdata/01/unsupported-ocm-config.yaml",
 			expectedError: expectError,
 		},
 		{
