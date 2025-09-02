@@ -196,7 +196,7 @@ func (d *FluxDeployer) applyManifests(ctx context.Context, manifests []byte) err
 
 	// Parse manifests into unstructured objects
 	reader := bytes.NewReader(manifests)
-	unstructuredObjects, err := d.parseManifests(reader)
+	unstructuredObjects, err := ParseManifests(reader)
 	if err != nil {
 		return fmt.Errorf("error parsing manifests: %w", err)
 	}
@@ -211,7 +211,7 @@ func (d *FluxDeployer) applyManifests(ctx context.Context, manifests []byte) err
 	return nil
 }
 
-func (d *FluxDeployer) parseManifests(reader io.Reader) ([]*unstructured.Unstructured, error) {
+func ParseManifests(reader io.Reader) ([]*unstructured.Unstructured, error) {
 	decoder := yaml.NewYAMLOrJSONDecoder(reader, 4096)
 	var result []*unstructured.Unstructured
 	for {
