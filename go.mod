@@ -6,7 +6,7 @@ require (
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/openmcp-project/controller-utils v0.19.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/spf13/cobra v1.9.1
+	github.com/spf13/cobra v1.10.0
 	github.com/stretchr/testify v1.11.1
 	k8s.io/api v0.34.0
 	k8s.io/apimachinery v0.34.0
