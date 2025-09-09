@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -52,12 +53,15 @@ func CopyDir(src, dst string) error {
 }
 
 // copyFile copies a single file from src to dst with the specified mode
-func copyFile(src, dst string, mode os.FileMode) error {
+func copyFile(src, dst string, mode os.FileMode) (err error) {
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("failed to open source file %s: %w", src, err)
 	}
-	defer srcFile.Close()
+	defer func() {
+		closeErr := srcFile.Close()
+		err = errors.Join(err, closeErr)
+	}()
 
 	// Create destination directory if it doesn't exist
 	dstDir := filepath.Dir(dst)
@@ -70,7 +74,10 @@ func copyFile(src, dst string, mode os.FileMode) error {
 	if err != nil {
 		return fmt.Errorf("failed to create destination file %s: %w", dst, err)
 	}
-	defer dstFile.Close()
+	defer func() {
+		closeErr := dstFile.Close()
+		err = errors.Join(err, closeErr)
+	}()
 
 	// Copy file contents
 	_, err = io.Copy(dstFile, srcFile)

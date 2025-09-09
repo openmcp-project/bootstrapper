@@ -60,7 +60,7 @@ func (t *TemplateTransformer) Transform(ctx context.Context, envName, targetDir 
 		return fmt.Errorf("failed to create target directory: %w", err)
 	}
 
-	//// Download template resources
+	// Download template resources
 	logger.Infof("Downloading template resources")
 
 	// download the fluxcd template resource to <downloadDir>/fluxcd
@@ -79,7 +79,7 @@ func (t *TemplateTransformer) Transform(ctx context.Context, envName, targetDir 
 		return fmt.Errorf("failed to download openmmcp template resource: %w", err)
 	}
 
-	//// Create directory structure
+	// Create directory structure
 	logger.Info("Transforming templates into deployment repository structure")
 
 	// create directory <targetDir>/envs/<envName>/fluxcd and <targetDir>/envs/<envName>/openmmcp
@@ -108,7 +108,7 @@ func (t *TemplateTransformer) Transform(ctx context.Context, envName, targetDir 
 		return fmt.Errorf("failed to create openmmcp resources directory: %w", err)
 	}
 
-	//// Copy files from downloaded templates to target directories
+	// Copy files from downloaded templates to target directories
 	logger.Debug("Copying template files to target directories")
 
 	// copy all files from <fluxDownloadDir>/templates/overlays to <targetDir>/envs/<envName>/fluxcd
@@ -216,7 +216,7 @@ func writeKubernetesKustomization(resources, patches []string, name, targetDir s
 	}
 
 	for _, p := range patches {
-		k.Kustomization.Patches = append(k.Kustomization.Patches, ktypes.Patch{
+		k.Patches = append(k.Patches, ktypes.Patch{
 			Path: p,
 		})
 	}
