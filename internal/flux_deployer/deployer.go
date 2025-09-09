@@ -5,89 +5,238 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/openmcp-project/controller-utils/pkg/clusters"
 	"github.com/sirupsen/logrus"
+	"sigs.k8s.io/kustomize/api/krusty"
+	"sigs.k8s.io/kustomize/kyaml/filesys"
 
+	cfg "github.com/openmcp-project/bootstrapper/internal/config"
 	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
 	"github.com/openmcp-project/bootstrapper/internal/template"
 	"github.com/openmcp-project/bootstrapper/internal/util"
 )
 
-type FluxDeployer struct {
-	componentLocation string
+const (
+	EnvsDirectoryName      = "envs"
+	FluxCDDirectoryName    = "fluxcd"
+	ResourcesDirectoryName = "resources"
+	TemplatesDirectoryName = "templates"
+	OverlaysDirectoryName  = "overlays"
 
-	// deploymentTemplates is the path to the deployment templates in the templates component.
-	// It consists of segments separated by slashes. All segments except the last one are names of component references.
-	// The last segment is the name of a resource in the component, which is reached by starting at the root component and going through the component references.
-	// For example, "gitops-templates/fluxcd" means: start at the root component, go to the component reference "gitops-templates", and then use the resource named "fluxcd" in that component.
-	deploymentTemplates        string
-	deploymentRepository       string
-	deploymentRepositoryBranch string
-	deploymentRepositoryPath   string
-	ocmConfig                  string
-	gitCredentials             string
-	fluxcdNamespace            string
-	platformKubeconfig         string
-	platformCluster            *clusters.Cluster
-	log                        *logrus.Logger
+	FluxCDSourceControllerResourceName        = "fluxcd-source-controller"
+	FluxCDKustomizationControllerResourceName = "fluxcd-kustomize-controller"
+	FluxCDHelmControllerResourceName          = "fluxcd-helm-controller"
+)
+
+type FluxDeployer struct {
+	Config *cfg.BootstrapperConfig
+
+	// GitConfigPath is the path to the Git configuration file
+	GitConfigPath string
+	// OcmConfigPath is the path to the OCM configuration file
+	OcmConfigPath string
+
+	platformCluster *clusters.Cluster
+	fluxNamespace   string
+	// fluxcdCV is the component version of the fluxcd source controller component
+	fluxcdCV *ocmcli.ComponentVersion
+	log      *logrus.Logger
+
+	workDir      string
+	downloadDir  string
+	templatesDir string
+	repoDir      string
 }
 
-func NewFluxDeployer(componentLocation, deploymentTemplates, deploymentRepository, deploymentRepositoryBranch, deploymentRepositoryPath,
-	ocmConfig, gitCredentials, fluxcdNamespace, platformKubeconfig string, platformCluster *clusters.Cluster, log *logrus.Logger) *FluxDeployer {
-
+func NewFluxDeployer(config *cfg.BootstrapperConfig, gitConfigPath, ocmConfigPath string, platformCluster *clusters.Cluster, log *logrus.Logger) *FluxDeployer {
 	return &FluxDeployer{
-		componentLocation:          componentLocation,
-		deploymentTemplates:        deploymentTemplates,
-		deploymentRepository:       deploymentRepository,
-		deploymentRepositoryBranch: deploymentRepositoryBranch,
-		deploymentRepositoryPath:   deploymentRepositoryPath,
-		ocmConfig:                  ocmConfig,
-		gitCredentials:             gitCredentials,
-		fluxcdNamespace:            fluxcdNamespace,
-		platformKubeconfig:         platformKubeconfig,
-		platformCluster:            platformCluster,
-		log:                        log,
+		Config:          config,
+		GitConfigPath:   gitConfigPath,
+		OcmConfigPath:   ocmConfigPath,
+		platformCluster: platformCluster,
+		fluxNamespace:   FluxSystemNamespace,
+		log:             log,
 	}
 }
 
-func (d *FluxDeployer) Deploy(ctx context.Context) error {
+func (d *FluxDeployer) Deploy(ctx context.Context) (err error) {
 
-	// Get root component and gitops-templates component.
+	if err := CreateGitCredentialsSecret(ctx, d.log, d.GitConfigPath, GitSecretName, d.fluxNamespace, d.platformCluster.Client()); err != nil {
+		return err
+	}
+
+	// Create temporary working directory
+	d.log.Info("Creating working directory for gitops-templates")
+	d.workDir, err = util.CreateTempDir()
+	if err != nil {
+		return fmt.Errorf("error creating temporary working directory for flux resource: %w", err)
+	}
+	defer func() {
+		err := util.DeleteTempDir(d.workDir)
+		if err != nil {
+			fmt.Printf("error removing temporary working directory for flux resource: %v\n", err)
+		}
+	}()
+	d.log.Tracef("Created working directory: %s", d.workDir)
+
+	d.downloadDir = filepath.Join(d.workDir, "download")
+	d.log.Tracef("Creating download directory: %s", d.downloadDir)
+	err = os.MkdirAll(d.downloadDir, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create download directory: %w", err)
+	}
+	d.log.Tracef("Created download directory: %s", d.downloadDir)
+
+	d.templatesDir = filepath.Join(d.workDir, "templates")
+	d.log.Tracef("Creating templates directory: %s", d.templatesDir)
+	err = os.MkdirAll(d.templatesDir, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create templates directory: %w", err)
+	}
+	d.log.Tracef("Created templates directory: %s", d.templatesDir)
+
+	d.repoDir = filepath.Join(d.workDir, "repo")
+	d.log.Tracef("Creating repo directory: %s", d.repoDir)
+	err = os.MkdirAll(d.repoDir, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create repo directory: %w", err)
+	}
+	d.log.Tracef("Created repo directory: %s", d.repoDir)
+
+	// Get components
+	// - root component
+	// - gitops-templates component
+	// - that contains the image resources for fluxcd source controller component
 	d.log.Info("Loading root component and gitops-templates component")
-	componentGetter := ocmcli.NewComponentGetter(d.componentLocation, d.deploymentTemplates, d.ocmConfig)
+	componentGetter := ocmcli.NewComponentGetter(d.Config.Component.OpenMCPComponentLocation, d.Config.Component.FluxcdTemplateResourcePath, d.OcmConfigPath)
 	if err := componentGetter.InitializeComponents(ctx); err != nil {
 		return err
 	}
 
-	// Create a temporary directory to store the downloaded resource
-	d.log.Info("Creating download directory for gitops-templates")
-	downloadDir, err := os.MkdirTemp("", "flux-resource-")
+	d.fluxcdCV, err = componentGetter.GetComponentVersionForResourceRecursive(ctx, componentGetter.RootComponentVersion(), FluxCDSourceControllerResourceName)
 	if err != nil {
-		return fmt.Errorf("error creating temporary download directory for flux resource: %w", err)
+		return fmt.Errorf("failed to get fluxcd source controller component version: %w", err)
 	}
-	defer func() {
-		if err := os.RemoveAll(downloadDir); err != nil {
-			fmt.Printf("error removing temporary download directory for flux resource: %v\n", err)
-		}
-	}()
-	d.log.Debugf("Download directory: %s", downloadDir)
 
 	// Download resource from gitops-templates component into the download directory
 	d.log.Info("Downloading gitops-templates")
-	if err := componentGetter.DownloadTemplatesResource(ctx, downloadDir); err != nil {
+	if err := componentGetter.DownloadTemplatesResource(ctx, d.downloadDir); err != nil {
 		return fmt.Errorf("error downloading templates: %w", err)
 	}
 
-	if err := d.DeployFluxControllers(ctx, componentGetter.RootComponentVersion(), downloadDir); err != nil {
-		return fmt.Errorf("error deploying flux controllers: %w", err)
+	// Copy files from <workdir>/download to <workdir>/templates, re-arranging the directory structure as needed for kustomize
+	if err := d.ArrangeTemplates(); err != nil {
+		return fmt.Errorf("error arranging templates directory: %w", err)
 	}
 
-	if err := d.establishFluxSync(ctx, downloadDir); err != nil {
-		return fmt.Errorf("error establishing flux synchronization: %w", err)
+	// Template all files in <workdir>/templates, and write the result to <workdir>/repo
+	if err := d.Template(); err != nil {
+		return fmt.Errorf("error templating files: %w", err)
+	}
+
+	// Kustomize <workdir>/repo/envs/<envName>/fluxcd
+	fluxCDEnvDir := filepath.Join(d.repoDir, EnvsDirectoryName, d.Config.Environment, FluxCDDirectoryName)
+	manifests, err := d.Kustomize(fluxCDEnvDir)
+	if err != nil {
+		return fmt.Errorf("error kustomizing templated files: %w", err)
+	}
+
+	// Apply manifests to the platform cluster
+	d.log.Info("Applying flux deployment objects")
+	if err := util.ApplyManifests(ctx, d.platformCluster, manifests); err != nil {
+		return err
 	}
 
 	return nil
+}
+
+// ArrangeTemplates fills the templates directory with the files from the download directory, adjusting the directory structure as needed for the kustomization.
+func (d *FluxDeployer) ArrangeTemplates() (err error) {
+	d.log.Info("Arranging template files")
+
+	// Create directory <templatesDir>/envs/<envName>/fluxcd
+	fluxCDEnvDir := filepath.Join(d.templatesDir, EnvsDirectoryName, d.Config.Environment, FluxCDDirectoryName)
+	err = os.MkdirAll(fluxCDEnvDir, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create fluxcd environment directory: %w", err)
+	}
+
+	// Create directory <templatesDir>/resources/fluxcd
+	fluxCDResourcesDir := filepath.Join(d.templatesDir, ResourcesDirectoryName, FluxCDDirectoryName)
+	err = os.MkdirAll(fluxCDResourcesDir, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create fluxcd resources directory: %w", err)
+	}
+
+	d.log.Debug("Copying template files to target directories")
+
+	// copy all files from <downloadDir>/templates/overlays to <templatesDir>/envs/<envName>/fluxcd
+	err = util.CopyDir(filepath.Join(d.downloadDir, TemplatesDirectoryName, OverlaysDirectoryName), fluxCDEnvDir)
+	if err != nil {
+		return fmt.Errorf("failed to copy fluxcd overlays: %w", err)
+	}
+
+	// copy all files from <downloadDir>/templates/resources to <templatesDir>/resources/fluxcd
+	err = util.CopyDir(filepath.Join(d.downloadDir, TemplatesDirectoryName, ResourcesDirectoryName), fluxCDResourcesDir)
+	if err != nil {
+		return fmt.Errorf("failed to copy fluxcd resources: %w", err)
+	}
+
+	d.log.Info("Arranged template files")
+	return nil
+}
+
+// Template templates the files in the templates directory, replacing placeholders with actual values.
+// The resulting files are written to the repo directory.
+func (d *FluxDeployer) Template() (err error) {
+	d.log.Infof("Applying templates from %s to deployment repository", d.Config.Component.FluxcdTemplateResourcePath)
+	templateInput := template.NewTemplateInput()
+
+	templateInput.SetImagePullSecrets(d.Config.ImagePullSecrets)
+
+	templateInput["fluxCDEnvPath"] = "./" + EnvsDirectoryName + "/" + d.Config.Environment + "/" + FluxCDDirectoryName
+	templateInput["gitRepoEnvBranch"] = d.Config.DeploymentRepository.RepoBranch
+	templateInput["fluxCDResourcesPath"] = "../../../" + ResourcesDirectoryName + "/" + FluxCDDirectoryName
+
+	templateInput.SetGitRepo(d.Config.DeploymentRepository)
+
+	if err = templateInput.AddImageResource(d.fluxcdCV, FluxCDSourceControllerResourceName, "sourceController"); err != nil {
+		return fmt.Errorf("failed to apply fluxcd source controller template input: %w", err)
+	}
+	if err = templateInput.AddImageResource(d.fluxcdCV, FluxCDKustomizationControllerResourceName, "kustomizeController"); err != nil {
+		return fmt.Errorf("failed to apply fluxcd kustomize controller template input: %w", err)
+	}
+	if err = templateInput.AddImageResource(d.fluxcdCV, FluxCDHelmControllerResourceName, "helmController"); err != nil {
+		return fmt.Errorf("failed to apply fluxcd helm controller template input: %w", err)
+	}
+
+	if err = TemplateDirectory(d.templatesDir, templateInput, d.repoDir, d.log); err != nil {
+		return fmt.Errorf("failed to apply templates from directory %s: %w", d.templatesDir, err)
+	}
+
+	return nil
+}
+
+// Kustomize runs kustomize on the given directory and returns the resulting yaml as a byte slice.
+func (d *FluxDeployer) Kustomize(dir string) ([]byte, error) {
+	d.log.Infof("Kustomizing files in directory: %s", dir)
+	fs := filesys.MakeFsOnDisk()
+	opts := krusty.MakeDefaultOptions()
+	kustomizer := krusty.MakeKustomizer(opts)
+
+	resourceMap, err := kustomizer.Run(fs, dir)
+	if err != nil {
+		return nil, fmt.Errorf("error running kustomization: %w", err)
+	}
+
+	resourcesYaml, err := resourceMap.AsYaml()
+	if err != nil {
+		return nil, fmt.Errorf("error converting resources to yaml: %w", err)
+	}
+
+	return resourcesYaml, nil
 }
 
 func (d *FluxDeployer) DeployFluxControllers(ctx context.Context, rootComponentVersion *ocmcli.ComponentVersion, downloadDir string) error {
@@ -109,7 +258,7 @@ func (d *FluxDeployer) DeployFluxControllers(ctx context.Context, rootComponentV
 	// Template
 	values := map[string]any{
 		"Values": map[string]any{
-			"namespace": d.fluxcdNamespace,
+			"namespace": d.fluxNamespace,
 			"images":    images,
 		},
 	}
@@ -121,50 +270,6 @@ func (d *FluxDeployer) DeployFluxControllers(ctx context.Context, rootComponentV
 
 	// Apply
 	d.log.Debug("Applying flux deployment objects")
-	if err := util.ApplyManifests(ctx, d.platformCluster, manifest); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (d *FluxDeployer) establishFluxSync(ctx context.Context, downloadDir string) error {
-	d.log.Info("Establishing flux synchronization with deployment repository")
-
-	const secretName = "git"
-
-	if err := CreateGitCredentialsSecret(ctx, d.log, d.gitCredentials, secretName, d.fluxcdNamespace, d.platformCluster.Client()); err != nil {
-		return err
-	}
-
-	// Read manifest file
-	filepath := path.Join(downloadDir, "resources", "gotk-sync.yaml")
-	d.log.Debugf("Reading flux synchronization objects from file %s", filepath)
-	manifestTpl, err := d.readFileContent(filepath)
-	if err != nil {
-		return fmt.Errorf("error reading manifests for flux sync: %w", err)
-	}
-
-	// Template
-	d.log.Debug("Templating flux synchronization objects")
-	values := map[string]any{
-		"Values": map[string]any{
-			"namespace": d.fluxcdNamespace,
-			"git": map[string]any{
-				"repoUrl":    d.deploymentRepository,
-				"mainBranch": d.deploymentRepositoryBranch,
-				"path":       d.deploymentRepositoryPath,
-				"secretName": secretName,
-			},
-		},
-	}
-	manifest, err := template.NewTemplateExecution().Execute("flux-sync", string(manifestTpl), values)
-	if err != nil {
-		return fmt.Errorf("error templating flux synchronization objects: %w", err)
-	}
-
-	// Apply
-	d.log.Debug("Applying flux synchronization objects")
 	if err := util.ApplyManifests(ctx, d.platformCluster, manifest); err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	cfg "github.com/openmcp-project/bootstrapper/internal/config"
 	"github.com/openmcp-project/bootstrapper/internal/flux_deployer"
 	logging "github.com/openmcp-project/bootstrapper/internal/log"
 	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
@@ -21,10 +22,20 @@ func TestDeployFluxController(t *testing.T) {
 
 	platformClient := fake.NewClientBuilder().Build()
 	platformCluster := clusters.NewTestClusterFromClient("platform", platformClient)
-	namespace := "flux-system-test"
+	namespace := flux_deployer.FluxSystemNamespace
 
-	d := flux_deployer.NewFluxDeployer("", "", "",
-		"", "", ocmcli.NoOcmConfig, "", namespace, "", platformCluster, logging.GetLogger())
+	config := &cfg.BootstrapperConfig{
+		Component: cfg.Component{
+			OpenMCPComponentLocation: "./testdata/01/root-component-version-1.yaml",
+		},
+		DeploymentRepository: cfg.DeploymentRepository{},
+		Providers:            cfg.Providers{},
+		ImagePullSecrets:     nil,
+		OpenMCPOperator:      cfg.OpenMCPOperator{},
+		Environment:          "",
+	}
+
+	d := flux_deployer.NewFluxDeployer(config, "", ocmcli.NoOcmConfig, platformCluster, logging.GetLogger())
 
 	// Create a deployment
 	err := d.DeployFluxControllers(t.Context(), rootComponentVersion1, downloadDir)
