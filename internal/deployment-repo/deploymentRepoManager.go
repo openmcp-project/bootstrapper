@@ -12,6 +12,8 @@ import (
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 
+	"github.com/openmcp-project/bootstrapper/internal/config"
+
 	gitconfig "github.com/openmcp-project/bootstrapper/internal/git-config"
 	"github.com/openmcp-project/bootstrapper/internal/log"
 	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
@@ -41,7 +43,7 @@ type DeploymentRepoManager struct {
 	// +optional
 	OcmConfigPath string
 
-	Config *DeploymentRepoConfig
+	Config *config.BootstrapperConfig
 
 	// TargetCluster is the Kubernetes cluster to which the deployment will be applied
 	TargetCluster *clusters.Cluster
@@ -71,7 +73,7 @@ type DeploymentRepoManager struct {
 }
 
 // NewDeploymentRepoManager creates a new DeploymentRepoManager with the specified parameters.
-func NewDeploymentRepoManager(config *DeploymentRepoConfig, targetCluster *clusters.Cluster, gitConfigPath, ocmConfigPath string) *DeploymentRepoManager {
+func NewDeploymentRepoManager(config *config.BootstrapperConfig, targetCluster *clusters.Cluster, gitConfigPath, ocmConfigPath string) *DeploymentRepoManager {
 	return &DeploymentRepoManager{
 		Config:        config,
 		TargetCluster: targetCluster,
@@ -384,7 +386,7 @@ func (m *DeploymentRepoManager) UpdateResourcesKustomization() error {
 			len(m.Config.Providers.PlatformServices)+
 			len(m.crdFiles))
 
-	//len(m.Config.OpenMCPOperator.Manifests))
+	// len(m.Config.OpenMCPOperator.Manifests))
 
 	for _, crdFile := range m.crdFiles {
 		files = append(files, filepath.Join(CRDsDirectoryName, filepath.Base(crdFile)))

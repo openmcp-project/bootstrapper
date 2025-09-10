@@ -8,6 +8,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 
+	"github.com/openmcp-project/bootstrapper/internal/config"
+
 	"github.com/openmcp-project/bootstrapper/internal/util"
 
 	deploymentrepo "github.com/openmcp-project/bootstrapper/internal/deployment-repo"
@@ -51,7 +53,7 @@ openmcp-bootstrapper manageDeploymentRepo <configFile>`,
 			return fmt.Errorf("failed to get platform cluster: %w", err)
 		}
 
-		config := &deploymentrepo.DeploymentRepoConfig{}
+		config := &config.BootstrapperConfig{}
 		err = config.ReadFromFile(configFilePath)
 		if err != nil {
 			return fmt.Errorf("failed to read config file: %w", err)
