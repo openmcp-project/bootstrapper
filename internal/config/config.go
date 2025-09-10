@@ -1,4 +1,4 @@
-package deploymentrepo
+package config
 
 import (
 	"encoding/json"
@@ -8,10 +8,9 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type DeploymentRepoConfig struct {
+type BootstrapperConfig struct {
 	Component            Component            `json:"component"`
 	DeploymentRepository DeploymentRepository `json:"repository"`
-	TargetCluster        TargetCluster        `json:"targetCluster"`
 	Providers            Providers            `json:"providers"`
 	ImagePullSecrets     []string             `json:"imagePullSecrets"`
 	OpenMCPOperator      OpenMCPOperator      `json:"openmcpOperator"`
@@ -42,8 +41,6 @@ type Providers struct {
 type OpenMCPOperator struct {
 	Config       json.RawMessage `json:"config"`
 	ConfigParsed map[string]interface{}
-
-	Manifests []Manifest `json:"manifests"`
 }
 
 type Manifest struct {
@@ -52,7 +49,7 @@ type Manifest struct {
 	ManifestParsed map[string]interface{}
 }
 
-func (c *DeploymentRepoConfig) ReadFromFile(path string) error {
+func (c *BootstrapperConfig) ReadFromFile(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -61,7 +58,7 @@ func (c *DeploymentRepoConfig) ReadFromFile(path string) error {
 	return yaml.Unmarshal(data, c)
 }
 
-func (c *DeploymentRepoConfig) SetDefaults() {
+func (c *BootstrapperConfig) SetDefaults() {
 	if len(c.Component.FluxcdTemplateResourcePath) == 0 {
 		c.Component.FluxcdTemplateResourcePath = "gitops-templates/fluxcd"
 	}
@@ -71,7 +68,7 @@ func (c *DeploymentRepoConfig) SetDefaults() {
 	}
 }
 
-func (c *DeploymentRepoConfig) Validate() error {
+func (c *BootstrapperConfig) Validate() error {
 	errs := field.ErrorList{}
 
 	if len(c.Environment) == 0 {
@@ -90,10 +87,6 @@ func (c *DeploymentRepoConfig) Validate() error {
 		errs = append(errs, field.Required(field.NewPath("repository.branch"), "repository branch is required"))
 	}
 
-	if len(c.TargetCluster.KubeconfigPath) == 0 {
-		errs = append(errs, field.Required(field.NewPath("targetCluster.kubeconfigPath"), "kubeconfig path is required"))
-	}
-
 	if len(c.OpenMCPOperator.Config) == 0 {
 		errs = append(errs, field.Required(field.NewPath("openmcpOperator.config"), "openmcp operator config is required"))
 	}
@@ -101,27 +94,6 @@ func (c *DeploymentRepoConfig) Validate() error {
 	err := yaml.Unmarshal(c.OpenMCPOperator.Config, &c.OpenMCPOperator.ConfigParsed)
 	if err != nil {
 		errs = append(errs, field.Invalid(field.NewPath("openmcpOperator.config"), string(c.OpenMCPOperator.Config), "openmcp operator config is not valid yaml"))
-	}
-
-	if len(c.OpenMCPOperator.Manifests) > 0 {
-		for i, manifest := range c.OpenMCPOperator.Manifests {
-			if len(manifest.Name) == 0 {
-				errs = append(errs, field.Required(field.NewPath("openmcpOperator.manifests").Index(i).Child("name"), "manifest name is required"))
-			}
-
-			if len(manifest.Manifest) == 0 {
-				errs = append(errs, field.Required(field.NewPath("openmcpOperator.manifests").Index(i).Child("manifest"), "manifest content is required"))
-				continue
-			}
-
-			var parsed map[string]interface{}
-			err = yaml.Unmarshal(manifest.Manifest, &parsed)
-			if err != nil {
-				errs = append(errs, field.Invalid(field.NewPath("openmcpOperator.manifests").Index(i), string(manifest.Manifest), "openmcp operator manifest is not valid yaml"))
-			} else {
-				c.OpenMCPOperator.Manifests[i].ManifestParsed = parsed
-			}
-		}
 	}
 
 	return errs.ToAggregate()

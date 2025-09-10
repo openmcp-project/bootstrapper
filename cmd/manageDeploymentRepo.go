@@ -3,15 +3,21 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/runtime"
+	controllerruntime "sigs.k8s.io/controller-runtime"
+
+	"github.com/openmcp-project/bootstrapper/internal/util"
 
 	deploymentrepo "github.com/openmcp-project/bootstrapper/internal/deployment-repo"
 	"github.com/openmcp-project/bootstrapper/internal/log"
 )
 
 const (
-	FlagGitConfig = "git-config"
-	FlagOcmConfig = "ocm-config"
+	FlagGitConfig  = "git-config"
+	FlagOcmConfig  = "ocm-config"
+	FlagKubeConfig = "kubeconfig"
 )
 
 type LogWriter struct{}
@@ -37,8 +43,16 @@ openmcp-bootstrapper manageDeploymentRepo <configFile>`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		configFilePath := args[0]
 
+		// disable controller-runtime logging
+		controllerruntime.SetLogger(logr.Discard())
+
+		targetCluster, err := util.GetCluster(cmd.Flag(FlagKubeConfig).Value.String(), "target-cluster", runtime.NewScheme())
+		if err != nil {
+			return fmt.Errorf("failed to get platform cluster: %w", err)
+		}
+
 		config := &deploymentrepo.DeploymentRepoConfig{}
-		err := config.ReadFromFile(configFilePath)
+		err = config.ReadFromFile(configFilePath)
 		if err != nil {
 			return fmt.Errorf("failed to read config file: %w", err)
 		}
@@ -50,6 +64,7 @@ openmcp-bootstrapper manageDeploymentRepo <configFile>`,
 
 		deploymentRepoManager, err := deploymentrepo.NewDeploymentRepoManager(
 			config,
+			targetCluster,
 			cmd.Flag(FlagGitConfig).Value.String(),
 			cmd.Flag(FlagOcmConfig).Value.String(),
 		).Initialize(cmd.Context())
@@ -101,6 +116,7 @@ func init() {
 	manageDeploymentRepoCmd.Flags().SortFlags = false
 	manageDeploymentRepoCmd.Flags().String(FlagOcmConfig, "", "ocm configuration file")
 	manageDeploymentRepoCmd.Flags().String(FlagGitConfig, "", "Git configuration file")
+	manageDeploymentRepoCmd.Flags().String(FlagKubeConfig, "", "Kubernetes configuration file")
 
 	if err := manageDeploymentRepoCmd.MarkFlagRequired(FlagGitConfig); err != nil {
 		panic(err)

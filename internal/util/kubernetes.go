@@ -5,15 +5,57 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 
 	"github.com/openmcp-project/controller-utils/pkg/clusters"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/openmcp-project/bootstrapper/internal/log"
 )
+
+// GetCluster creates and initializes a clusters.Cluster object based on the provided kubeconfigPath.
+// If kubeconfigPath is empty, it tries to read the "KUBECONFIG" environment variable.
+// If that is also empty, it defaults to "$HOME/.kube/config".
+func GetCluster(kubeconfigPath, id string, scheme *runtime.Scheme) (*clusters.Cluster, error) {
+	if len(kubeconfigPath) > 0 {
+		return createCluster(kubeconfigPath, id, scheme)
+	}
+
+	kubeconfigEnvVar := os.Getenv("KUBECONFIG")
+	if len(kubeconfigEnvVar) > 0 {
+		return createCluster(kubeconfigEnvVar, id, scheme)
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("error getting user home directory: %w", err)
+	}
+
+	homeConfigPath := filepath.Join(homeDir, ".kube", "config")
+	return createCluster(homeConfigPath, id, scheme)
+}
+
+func createCluster(kubeconfigPath, id string, scheme *runtime.Scheme) (*clusters.Cluster, error) {
+	c := clusters.New(id)
+	c.WithConfigPath(kubeconfigPath)
+
+	err := c.InitializeRESTConfig()
+	if err != nil {
+		return nil, fmt.Errorf("error initializing REST config: %w", err)
+	}
+
+	err = c.InitializeClient(scheme)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing cluster client: %w", err)
+	}
+
+	return c, nil
+}
 
 func ApplyManifests(ctx context.Context, cluster *clusters.Cluster, manifests []byte) error {
 

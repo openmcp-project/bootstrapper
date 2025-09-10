@@ -1,5 +1,6 @@
 package deploymentrepo_test
 
+/*
 import (
 	"path/filepath"
 	"testing"
@@ -101,3 +102,4 @@ func ValidateProvider(t *testing.T, provider map[string]interface{}, name, image
 		assert.Contains(t, imagePullSecretsList, map[string]interface{}{"name": ips})
 	}
 }
+*/

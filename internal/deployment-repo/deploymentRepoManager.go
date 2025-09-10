@@ -8,12 +8,7 @@ import (
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-git/v5"
-	"github.com/go-logr/logr"
 	"github.com/openmcp-project/controller-utils/pkg/clusters"
-	"k8s.io/apimachinery/pkg/runtime"
-	controllerruntime "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/yaml"
-
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 
@@ -48,6 +43,9 @@ type DeploymentRepoManager struct {
 
 	Config *DeploymentRepoConfig
 
+	// TargetCluster is the Kubernetes cluster to which the deployment will be applied
+	TargetCluster *clusters.Cluster
+
 	// Internals
 	// workDir is a temporary directory used for processing
 	workDir string
@@ -70,14 +68,13 @@ type DeploymentRepoManager struct {
 	fluxcdCV *ocmcli.ComponentVersion
 	// crdFiles is a list of CRD files downloaded from the openmcp-operator component
 	crdFiles []string
-	// targetCluster is the Kubernetes cluster to which the deployment will be applied
-	targetCluster *clusters.Cluster
 }
 
 // NewDeploymentRepoManager creates a new DeploymentRepoManager with the specified parameters.
-func NewDeploymentRepoManager(config *DeploymentRepoConfig, gitConfigPath, ocmConfigPath string) *DeploymentRepoManager {
+func NewDeploymentRepoManager(config *DeploymentRepoConfig, targetCluster *clusters.Cluster, gitConfigPath, ocmConfigPath string) *DeploymentRepoManager {
 	return &DeploymentRepoManager{
 		Config:        config,
+		TargetCluster: targetCluster,
 		GitConfigPath: gitConfigPath,
 		OcmConfigPath: ocmConfigPath,
 	}
@@ -164,21 +161,6 @@ func (m *DeploymentRepoManager) Initialize(ctx context.Context) (*DeploymentRepo
 		return m, fmt.Errorf("failed to checkout or create branch %s: %w", m.Config.DeploymentRepository.RepoBranch, err)
 	}
 
-	logger.Infof("Creating kubernets client for target cluster from kubeconfig %s", m.Config.TargetCluster.KubeconfigPath)
-
-	// disable controller-runtime logging
-	controllerruntime.SetLogger(logr.Discard())
-
-	m.targetCluster = clusters.New("platform").WithConfigPath(m.Config.TargetCluster.KubeconfigPath)
-	err = m.targetCluster.InitializeRESTConfig()
-	if err != nil {
-		return m, fmt.Errorf("failed to initialize target cluster REST config: %w", err)
-	}
-	err = m.targetCluster.InitializeClient(runtime.NewScheme())
-	if err != nil {
-		return m, fmt.Errorf("failed to initialize target cluster client: %w", err)
-	}
-
 	return m, nil
 }
 
@@ -259,36 +241,38 @@ func (m *DeploymentRepoManager) ApplyTemplates(ctx context.Context) error {
 		return fmt.Errorf("failed to apply templates from directory %s: %w", m.templatesDir, err)
 	}
 
-	workTree, err := m.gitRepo.Worktree()
-	if err != nil {
-		return fmt.Errorf("failed to get worktree: %w", err)
-	}
-
-	workTreePath := filepath.Join(ResourcesDirectoryName, OpenMCPDirectoryName, "extra")
-
-	for _, manifest := range m.Config.OpenMCPOperator.Manifests {
-		workTreeFile := filepath.Join(workTreePath, manifest.Name+".yaml")
-		logger.Infof("Applying openmcp-operator manifest %s to deployment repository", manifest.Name)
-
-		manifestRaw, err := yaml.Marshal(manifest.ManifestParsed)
+	/*
+		workTree, err := m.gitRepo.Worktree()
 		if err != nil {
-			return fmt.Errorf("failed to marshal openmcp-operator manifest %s: %w", manifest.Name, err)
+			return fmt.Errorf("failed to get worktree: %w", err)
 		}
 
-		err = os.MkdirAll(filepath.Join(m.gitRepoDir, workTreePath), 0755)
-		if err != nil {
-			return fmt.Errorf("failed to create directory %s in deployment repository: %w", workTreePath, err)
-		}
+		workTreePath := filepath.Join(ResourcesDirectoryName, OpenMCPDirectoryName, "extra")
 
-		err = os.WriteFile(filepath.Join(m.gitRepoDir, workTreeFile), manifestRaw, 0o644)
-		if err != nil {
-			return fmt.Errorf("failed to write openmcp-operator manifest %s to deployment repository: %w", manifest.Name, err)
-		}
-		_, err = workTree.Add(workTreePath)
-		if err != nil {
-			return fmt.Errorf("failed to add openmcp-operator manifest %s to git index: %w", manifest.Name, err)
-		}
-	}
+			for _, manifest := range m.Config.OpenMCPOperator.Manifests {
+				workTreeFile := filepath.Join(workTreePath, manifest.Name+".yaml")
+				logger.Infof("Applying openmcp-operator manifest %s to deployment repository", manifest.Name)
+
+				manifestRaw, err := yaml.Marshal(manifest.ManifestParsed)
+				if err != nil {
+					return fmt.Errorf("failed to marshal openmcp-operator manifest %s: %w", manifest.Name, err)
+				}
+
+				err = os.MkdirAll(filepath.Join(m.gitRepoDir, workTreePath), 0755)
+				if err != nil {
+					return fmt.Errorf("failed to create directory %s in deployment repository: %w", workTreePath, err)
+				}
+
+				err = os.WriteFile(filepath.Join(m.gitRepoDir, workTreeFile), manifestRaw, 0o644)
+				if err != nil {
+					return fmt.Errorf("failed to write openmcp-operator manifest %s to deployment repository: %w", manifest.Name, err)
+				}
+				_, err = workTree.Add(workTreePath)
+				if err != nil {
+					return fmt.Errorf("failed to add openmcp-operator manifest %s to git index: %w", manifest.Name, err)
+				}
+			}
+	*/
 
 	return nil
 }
@@ -398,8 +382,9 @@ func (m *DeploymentRepoManager) UpdateResourcesKustomization() error {
 		len(m.Config.Providers.ClusterProviders)+
 			len(m.Config.Providers.ServiceProviders)+
 			len(m.Config.Providers.PlatformServices)+
-			len(m.crdFiles)+
-			len(m.Config.OpenMCPOperator.Manifests))
+			len(m.crdFiles))
+
+	//len(m.Config.OpenMCPOperator.Manifests))
 
 	for _, crdFile := range m.crdFiles {
 		files = append(files, filepath.Join(CRDsDirectoryName, filepath.Base(crdFile)))
@@ -417,9 +402,11 @@ func (m *DeploymentRepoManager) UpdateResourcesKustomization() error {
 		files = append(files, filepath.Join("platform-services", platformService+".yaml"))
 	}
 
-	for _, manifest := range m.Config.OpenMCPOperator.Manifests {
-		files = append(files, filepath.Join("extra", manifest.Name+".yaml"))
-	}
+	/*
+		for _, manifest := range m.Config.OpenMCPOperator.Manifests {
+			files = append(files, filepath.Join("extra", manifest.Name+".yaml"))
+		}
+	*/
 
 	// open resources root customization
 	resourcesRootKustomizationPath := filepath.Join(ResourcesDirectoryName, OpenMCPDirectoryName, "kustomization.yaml")
@@ -484,7 +471,7 @@ func (m *DeploymentRepoManager) RunKustomizeAndApply(ctx context.Context) error 
 	}
 
 	logger.Infof("Applying kustomized resources to target cluster")
-	err = util.ApplyManifests(ctx, m.targetCluster, resourcesYAML)
+	err = util.ApplyManifests(ctx, m.TargetCluster, resourcesYAML)
 	if err != nil {
 		return fmt.Errorf("failed to apply kustomized resources to cluster: %w", err)
 	}
