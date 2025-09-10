@@ -1,0 +1,35 @@
+# Path from the overlays folder to the resources folder of fluxcd (e.g. ../../../resources/fluxcd)
+fluxCDResourcesPath: "../resources"
+# Path to the env fluxCD folder (e.g. envs/%ENV%/fluxcd)
+fluxCDEnvPath: ""
+# branch of the env (e.g. dev)
+gitRepoEnvBranch: ""
+
+# The information for the git repo
+git:
+    repoUrl: ""
+    mainBranch: ""
+
+# Image pull secrets to be added to all deployments
+imagePullSecrets: []
+    # - name: my-registry-secret
+
+# Image replacement variables
+# You can either specify a prefix which is put in front of xxx-controller or directly specify the images
+images:
+    prefix: "ghcr.io/fluxcd"
+    # prefix: "ghcr.io/openmcp-project/fluxcd"
+#     sourceController:
+#         image: "ghcr.io/fluxcd/source-controller"
+#         tag: "latest" # optional
+#         digest: "" # optional
+#     notificationController:
+#         image: "ghcr.io/fluxcd/notification-controller"
+#     kustomizeController:
+#         image: "ghcr.io/fluxcd/kustomize-controller"
+#     helmController:
+#         image: "ghcr.io/fluxcd/helm-controller"
+#     imageReflectorController:
+#         image: "ghcr.io/fluxcd/image-reflector-controller"
+#     imageAutomationController:
+#         image: "ghcr.io/fluxcd/image-automation-controller"

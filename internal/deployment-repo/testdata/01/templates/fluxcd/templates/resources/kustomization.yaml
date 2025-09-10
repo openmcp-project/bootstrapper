@@ -1,0 +1,41 @@
+---
+{{- $prefix := .Values.images.prefix }}
+{{- $images := dict
+    "source-controller" .Values.images.sourceController
+    "notification-controller" .Values.images.notificationController
+    "kustomize-controller" .Values.images.kustomizeController
+    "helm-controller" .Values.images.helmController
+    "image-reflector-controller" .Values.images.imageReflectorController
+    "image-automation-controller" .Values.images.imageAutomationController
+}}
+resources:
+  - components.yaml
+  - gitrepo.yaml
+  - flux-kustomization.yaml
+images:
+{{- range $name, $cfg := $images }}
+  - name: ghcr.io/fluxcd/{{ $name }}
+    newName: {{ if $cfg }}{{ $cfg.image }}{{- else if $prefix }}{{ $prefix }}/{{ $name }}{{- else }}ghcr.io/fluxcd/{{ $name }}{{- end }}
+    {{- if and $cfg $cfg.tag }}
+    newTag: {{ $cfg.tag }}
+    {{- end }}
+    {{- if and $cfg $cfg.digest }}
+    digest: {{ $cfg.digest }}
+    {{- end }}
+{{- end }}
+
+{{- if .Values.imagePullSecrets }}
+patches:
+  - target:
+      kind: Deployment
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: this_value_is_ignored
+      spec:
+        template:
+          spec:
+            imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 14 }}
+{{- end }}

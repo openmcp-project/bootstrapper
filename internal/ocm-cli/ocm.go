@@ -46,6 +46,13 @@ func Execute(ctx context.Context, commands []string, args []string, ocmConfig st
 		return fmt.Errorf("error waiting for ocm command to finish: %w", err)
 	}
 
+	// get exit code
+	if exitError, ok := cmd.ProcessState.Sys().(interface{ ExitStatus() int }); ok {
+		if exitCode := exitError.ExitStatus(); exitCode != 0 {
+			return fmt.Errorf("ocm command exited with code %d", exitCode)
+		}
+	}
+
 	return nil
 }
 

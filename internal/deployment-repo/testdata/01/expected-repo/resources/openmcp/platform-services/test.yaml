@@ -1,0 +1,9 @@
+apiVersion: openmcp.cloud/v1alpha1
+kind: PlatformService
+metadata:
+  name: "test"
+spec:
+  image: "ghcr.io/openmcp-project/images/platform-service-test:v0.3.0"
+  imagePullSecrets:
+    - name: "imgpull-a"
+    - name: "imgpull-b"

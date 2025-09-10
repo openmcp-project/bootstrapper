@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -9,21 +8,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
-func WriteToFile(t *testing.T, filePath, content string) {
-	err := os.WriteFile(filePath, []byte(content), 0644)
-	if err != nil {
-		t.Fatalf("failed to write to file %s: %v", filePath, err)
-	}
-}
-
-func ReadFromFile(t *testing.T, filePath string) string {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		t.Fatalf("failed to read from file %s: %v", filePath, err)
-	}
-	return string(data)
-}
-
+// AddFileToWorkTree stages a file in the given worktree
 func AddFileToWorkTree(t *testing.T, workTree *git.Worktree, filePath string) {
 	_, err := workTree.Add(filePath)
 	if err != nil {
@@ -31,6 +16,7 @@ func AddFileToWorkTree(t *testing.T, workTree *git.Worktree, filePath string) {
 	}
 }
 
+// WorkTreeCommit commits staged changes in the given worktree with the specified message
 func WorkTreeCommit(t *testing.T, workTree *git.Worktree, message string) {
 	_, err := workTree.Commit(message, &git.CommitOptions{
 		Author: &object.Signature{

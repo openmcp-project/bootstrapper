@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	FlagGitConfig  = "git-config"
-	FlagOcmConfig  = "ocm-config"
-	FlagKubeConfig = "kubeconfig"
+	FlagGitConfig        = "git-config"
+	FlagOcmConfig        = "ocm-config"
+	FlagKubeConfig       = "kubeconfig"
+	FlagExtraManifestDir = "extra-manifest-dir"
 )
 
 type LogWriter struct{}
@@ -69,6 +70,7 @@ openmcp-bootstrapper manageDeploymentRepo <configFile>`,
 			targetCluster,
 			cmd.Flag(FlagGitConfig).Value.String(),
 			cmd.Flag(FlagOcmConfig).Value.String(),
+			cmd.Flag(FlagExtraManifestDir).Value.String(),
 		).Initialize(cmd.Context())
 
 		defer func() {
@@ -92,6 +94,11 @@ openmcp-bootstrapper manageDeploymentRepo <configFile>`,
 		err = deploymentRepoManager.ApplyCustomResourceDefinitions(cmd.Context())
 		if err != nil {
 			return fmt.Errorf("failed to apply custom resource definitions: %w", err)
+		}
+
+		err = deploymentRepoManager.ApplyExtraManifests(cmd.Context())
+		if err != nil {
+			return fmt.Errorf("failed to apply extra manifests: %w", err)
 		}
 
 		err = deploymentRepoManager.UpdateResourcesKustomization()
@@ -119,6 +126,7 @@ func init() {
 	manageDeploymentRepoCmd.Flags().String(FlagOcmConfig, "", "ocm configuration file")
 	manageDeploymentRepoCmd.Flags().String(FlagGitConfig, "", "Git configuration file")
 	manageDeploymentRepoCmd.Flags().String(FlagKubeConfig, "", "Kubernetes configuration file")
+	manageDeploymentRepoCmd.Flags().String(FlagExtraManifestDir, "", "Directory containing extra manifests to apply")
 
 	if err := manageDeploymentRepoCmd.MarkFlagRequired(FlagGitConfig); err != nil {
 		panic(err)

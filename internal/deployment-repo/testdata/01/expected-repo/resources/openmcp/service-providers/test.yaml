@@ -1,0 +1,9 @@
+apiVersion: openmcp.cloud/v1alpha1
+kind: ServiceProvider
+metadata:
+  name: "test"
+spec:
+  image: "ghcr.io/openmcp-project/images/service-provider-test:v0.2.0"
+  imagePullSecrets:
+    - name: "imgpull-a"
+    - name: "imgpull-b"
