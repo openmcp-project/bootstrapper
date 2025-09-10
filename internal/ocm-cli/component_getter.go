@@ -14,6 +14,8 @@ type ComponentGetter struct {
 	ocmConfig           string
 
 	// Fields derived during InitializeComponents
+	repo string
+
 	rootComponentVersion       *ComponentVersion
 	templatesComponentVersion  *ComponentVersion
 	templatesComponentLocation string
@@ -29,7 +31,9 @@ func NewComponentGetter(rootComponentLocation, deploymentTemplates, ocmConfig st
 }
 
 func (g *ComponentGetter) InitializeComponents(ctx context.Context) error {
-	repo, err := extractRepoFromLocation(g.rootComponentLocation)
+	var err error
+
+	g.repo, err = extractRepoFromLocation(g.rootComponentLocation)
 	if err != nil {
 		return err
 	}
@@ -50,14 +54,14 @@ func (g *ComponentGetter) InitializeComponents(ctx context.Context) error {
 
 	cv := g.rootComponentVersion
 	for _, refName := range referenceNames {
-		cv, err = getReferencedComponentVersion(ctx, repo, cv, refName, g.ocmConfig)
+		cv, err = g.GetReferencedComponentVersion(ctx, cv, refName)
 		if err != nil {
 			return fmt.Errorf("error getting referenced component version %s: %w", refName, err)
 		}
 	}
 
 	g.templatesComponentVersion = cv
-	g.templatesComponentLocation = buildLocation(repo, cv.Component.Name, cv.Component.Version)
+	g.templatesComponentLocation = buildLocation(g.repo, cv.Component.Name, cv.Component.Version)
 	return nil
 }
 
@@ -73,14 +77,14 @@ func (g *ComponentGetter) TemplatesResourceName() string {
 	return g.templatesResourceName
 }
 
-func getReferencedComponentVersion(ctx context.Context, repo string, parentCV *ComponentVersion, refName string, ocmConfig string) (*ComponentVersion, error) {
+func (g *ComponentGetter) GetReferencedComponentVersion(ctx context.Context, parentCV *ComponentVersion, refName string) (*ComponentVersion, error) {
 	ref, err := parentCV.GetComponentReference(refName)
 	if err != nil {
 		return nil, fmt.Errorf("error getting component reference %s: %w", refName, err)
 	}
 
-	location := buildLocation(repo, ref.ComponentName, ref.Version)
-	cv, err := GetComponentVersion(ctx, location, ocmConfig)
+	location := buildLocation(g.repo, ref.ComponentName, ref.Version)
+	cv, err := GetComponentVersion(ctx, location, g.ocmConfig)
 	if err != nil {
 		return nil, fmt.Errorf("error getting component version %s: %w", location, err)
 	}
@@ -88,8 +92,81 @@ func getReferencedComponentVersion(ctx context.Context, repo string, parentCV *C
 	return cv, nil
 }
 
+func (g *ComponentGetter) GetReferencedComponentVersionRecursive(ctx context.Context, parentCV *ComponentVersion, refName string) (*ComponentVersion, error) {
+	// First, try to get the reference directly from the parent component version
+	ref, err := g.GetReferencedComponentVersion(ctx, parentCV, refName)
+	if err == nil {
+		return ref, nil
+	}
+
+	// If not found, search recursively in all component references
+	for _, componentRef := range parentCV.Component.ComponentReferences {
+		subCV, err := g.GetReferencedComponentVersion(ctx, parentCV, componentRef.Name)
+		if err != nil {
+			continue
+		}
+		ref, err := g.GetReferencedComponentVersionRecursive(ctx, subCV, refName)
+		if err == nil {
+			return ref, nil
+		}
+	}
+
+	return nil, fmt.Errorf("component reference %s not found in component version %s or its references", refName, parentCV.Component.Name)
+}
+
+func (g *ComponentGetter) GetComponentVersionForResourceRecursive(ctx context.Context, parentCV *ComponentVersion, resourceName string) (*ComponentVersion, error) {
+	// Check if the resource exists in the current component version
+	_, err := parentCV.GetResource(resourceName)
+	if err == nil {
+		return parentCV, nil
+	}
+
+	// If not found, search recursively in all component references
+	for _, componentRef := range parentCV.Component.ComponentReferences {
+		subCV, err := g.GetReferencedComponentVersion(ctx, parentCV, componentRef.Name)
+		if err != nil {
+			continue
+		}
+		cv, err := g.GetComponentVersionForResourceRecursive(ctx, subCV, resourceName)
+		if err == nil {
+			return cv, nil
+		}
+	}
+
+	return nil, fmt.Errorf("resource %s not found in component version %s or its references", resourceName, parentCV.Component.Name)
+}
+
 func (g *ComponentGetter) DownloadTemplatesResource(ctx context.Context, downloadDir string) error {
 	return downloadDirectoryResource(ctx, g.templatesComponentLocation, g.templatesResourceName, downloadDir, g.ocmConfig)
+}
+
+func (g *ComponentGetter) DownloadDirectoryResourceByLocation(ctx context.Context, rootCV *ComponentVersion, location string, downloadDir string) error {
+	var err error
+
+	location = strings.TrimSpace(location)
+	segments := strings.Split(location, "/")
+	if len(segments) == 0 {
+		return fmt.Errorf("location must contain a resource name or component references and a resource name separated by slashes (ref1/.../refN/resource): %s", location)
+	}
+
+	referenceNames := segments[:len(segments)-1]
+	resourceName := segments[len(segments)-1]
+
+	cv := rootCV
+	for _, refName := range referenceNames {
+		cv, err = g.GetReferencedComponentVersion(ctx, cv, refName)
+		if err != nil {
+			return fmt.Errorf("error getting referenced component version %s: %w", refName, err)
+		}
+	}
+
+	componentLocation := buildLocation(g.repo, cv.Component.Name, cv.Component.Version)
+	return downloadDirectoryResource(ctx, componentLocation, resourceName, downloadDir, g.ocmConfig)
+}
+
+func (g *ComponentGetter) DownloadDirectoryResource(ctx context.Context, cv *ComponentVersion, resourceName string, downloadDir string) error {
+	componentLocation := buildLocation(g.repo, cv.Component.Name, cv.Component.Version)
+	return downloadDirectoryResource(ctx, componentLocation, resourceName, downloadDir, g.ocmConfig)
 }
 
 func downloadDirectoryResource(ctx context.Context, componentLocation string, resourceName string, downloadDir string, ocmConfig string) error {

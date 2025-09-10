@@ -118,6 +118,7 @@ func BuildComponent(componentConstructorLocation string, t *testing.T) string {
 		"add",
 		"componentversions",
 		"--create",
+		"--skip-digest-generation",
 		"--file",
 		ctfDir,
 		componentConstructorLocation}...)

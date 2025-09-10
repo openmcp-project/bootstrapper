@@ -1,0 +1,98 @@
+components:
+  - name: github.com/openmcp-project/openmcp
+    version: v0.0.1
+    provider:
+      name: openmcp-project
+
+    componentReferences:
+      - componentName: github.com/openmcp-project/openmcp-operator
+        name: openmcp-operator
+        version: v0.2.1
+
+      - componentName: github.com/openmcp-project/cluster-provider-test
+        name: cluster-provider-test
+        version: v0.1.0
+
+      - componentName: github.com/openmcp-project/service-provider-test
+        name: service-provider-test
+        version: v0.2.0
+
+      - componentName: github.com/openmcp-project/platform-service-test
+        name: platform-service-test
+        version: v0.3.0
+
+      - componentName: github.com/openmcp-project/deployment-templates
+        name: deployment-templates
+        version: v0.1.1
+
+  - name: github.com/openmcp-project/openmcp-operator
+    version: v0.2.1
+    provider:
+      name: openmcp-project
+
+    resources:
+      - name: openmcp-operator-image
+        type: ociImage
+        version: v0.2.0
+        access:
+          type: ociArtifact
+          imageReference: ghcr.io/openmcp-project/images/openmcp-operator:v0.2.1
+
+      - name: openmcp-operator-crds
+        type: fileSystem
+        version: v0.1.1
+        input:
+          type: dir
+          path: ./crds
+
+  - name: github.com/openmcp-project/cluster-provider-test
+    version: v0.1.0
+    provider:
+      name: openmcp-project
+
+    resources:
+      - name: cluster-provider-test-image
+        type: ociImage
+        version: v0.1.0
+        access:
+          type: ociArtifact
+          imageReference: ghcr.io/openmcp-project/images/cluster-provider-test:v0.1.0
+
+  - name: github.com/openmcp-project/service-provider-test
+    version: v0.2.0
+    provider:
+        name: openmcp-project
+
+    resources:
+      - name: service-provider-test-image
+        type: ociImage
+        version: v0.2.0
+        access:
+            type: ociArtifact
+            imageReference: ghcr.io/openmcp-project/images/service-provider-test:v0.2.0
+
+  - name: github.com/openmcp-project/platform-service-test
+    version: v0.3.0
+    provider:
+      name: openmcp-project
+
+    resources:
+      - name: service-provider-test-image
+        type: ociImage
+        version: v0.3.0
+        access:
+          type: ociArtifact
+          imageReference: ghcr.io/openmcp-project/images/platform-service-test:v0.3.0
+
+  - name: github.com/openmcp-project/deployment-templates
+    version: v0.1.1
+    provider:
+      name: openmcp-project
+
+    resources:
+      - name: templates
+        type: fileSystem
+        version: v0.1.1
+        input:
+          type: dir
+          path: ./templates

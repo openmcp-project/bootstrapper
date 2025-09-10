@@ -2,8 +2,30 @@ package template
 
 import (
 	"bytes"
+	"strings"
 	gotmpl "text/template"
+
+	"github.com/Masterminds/sprig/v3"
+	"sigs.k8s.io/yaml"
 )
+
+// toYAML takes an interface, marshals it to yaml, and returns a string. It will
+// always return a string, even on marshal error (empty string).
+func toYAML(v interface{}) string {
+	data, err := yaml.Marshal(v)
+	if err != nil {
+		// Swallow errors inside of a template.
+		return ""
+	}
+	return strings.TrimSuffix(string(data), "\n")
+}
+
+// fromYAML takes a string, unmarshals it from yaml, and returns an interface.
+func fromYAML(input string) (any, error) {
+	var output any
+	err := yaml.Unmarshal([]byte(input), &output)
+	return output, err
+}
 
 // TemplateExecution is a struct that provides methods to execute templates with input data.
 type TemplateExecution struct {
@@ -15,10 +37,16 @@ type TemplateExecution struct {
 // NewTemplateExecution creates a new TemplateExecution instance with default settings.
 func NewTemplateExecution() *TemplateExecution {
 	t := &TemplateExecution{
-		funcMaps:               make([]gotmpl.FuncMap, 0),
+		funcMaps:               make([]gotmpl.FuncMap, 1),
 		templateInputFormatter: NewTemplateInputFormatter(true),
 		missingKeyOption:       "error",
 	}
+
+	t.funcMaps = append(t.funcMaps, sprig.FuncMap())
+	t.funcMaps = append(t.funcMaps, gotmpl.FuncMap{
+		"toYaml":   toYAML,
+		"fromYaml": fromYAML,
+	})
 	return t
 }
 
@@ -30,8 +58,8 @@ func (t *TemplateExecution) WithInputFormatter(formatter *TemplateInputFormatter
 }
 
 // WithFuncMap adds a function map to the template execution.
-func (t *TemplateExecution) WithFuncMap(funcMaps gotmpl.FuncMap) *TemplateExecution {
-	t.funcMaps = append(t.funcMaps, funcMaps)
+func (t *TemplateExecution) WithFuncMap(funcMap gotmpl.FuncMap) *TemplateExecution {
+	t.funcMaps = append(t.funcMaps, funcMap)
 	return t
 }
 
@@ -66,6 +94,12 @@ func (t *TemplateExecution) Execute(name, template string, input map[string]inte
 	data := bytes.NewBuffer([]byte{})
 	if err = tmpl.Execute(data, input); err != nil {
 		return nil, TemplateErrorBuilder(err).WithSource(&template).WithInput(input, t.templateInputFormatter).Build()
+	}
+
+	if t.missingKeyOption == "zero" {
+		if noValueErr := CreateErrorIfContainsNoValue(data.String(), name, input, t.templateInputFormatter); noValueErr != nil {
+			return nil, noValueErr
+		}
 	}
 
 	return data.Bytes(), nil
