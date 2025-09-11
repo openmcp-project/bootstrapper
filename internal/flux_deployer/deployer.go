@@ -12,22 +12,11 @@ import (
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 
+	"github.com/openmcp-project/bootstrapper/internal/common"
 	cfg "github.com/openmcp-project/bootstrapper/internal/config"
 	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
 	"github.com/openmcp-project/bootstrapper/internal/template"
 	"github.com/openmcp-project/bootstrapper/internal/util"
-)
-
-const (
-	EnvsDirectoryName      = "envs"
-	FluxCDDirectoryName    = "fluxcd"
-	ResourcesDirectoryName = "resources"
-	TemplatesDirectoryName = "templates"
-	OverlaysDirectoryName  = "overlays"
-
-	FluxCDSourceControllerResourceName        = "fluxcd-source-controller"
-	FluxCDKustomizationControllerResourceName = "fluxcd-kustomize-controller"
-	FluxCDHelmControllerResourceName          = "fluxcd-helm-controller"
 )
 
 type FluxDeployer struct {
@@ -115,7 +104,7 @@ func (d *FluxDeployer) Deploy(ctx context.Context) (err error) {
 		return err
 	}
 
-	d.fluxcdCV, err = componentGetter.GetComponentVersionForResourceRecursive(ctx, componentGetter.RootComponentVersion(), FluxCDSourceControllerResourceName)
+	d.fluxcdCV, err = componentGetter.GetComponentVersionForResourceRecursive(ctx, componentGetter.RootComponentVersion(), common.FluxCDSourceControllerResourceName)
 	if err != nil {
 		return fmt.Errorf("failed to get fluxcd source controller component version: %w", err)
 	}
@@ -137,7 +126,7 @@ func (d *FluxDeployer) Deploy(ctx context.Context) (err error) {
 	}
 
 	// Kustomize <workdir>/repo/envs/<envName>/fluxcd
-	fluxCDEnvDir := filepath.Join(d.repoDir, EnvsDirectoryName, d.Config.Environment, FluxCDDirectoryName)
+	fluxCDEnvDir := filepath.Join(d.repoDir, common.EnvsDirectoryName, d.Config.Environment, common.FluxCDDirectoryName)
 	manifests, err := d.Kustomize(fluxCDEnvDir)
 	if err != nil {
 		return fmt.Errorf("error kustomizing templated files: %w", err)
@@ -157,14 +146,14 @@ func (d *FluxDeployer) ArrangeTemplates() (err error) {
 	d.log.Info("Arranging template files")
 
 	// Create directory <templatesDir>/envs/<envName>/fluxcd
-	fluxCDEnvDir := filepath.Join(d.templatesDir, EnvsDirectoryName, d.Config.Environment, FluxCDDirectoryName)
+	fluxCDEnvDir := filepath.Join(d.templatesDir, common.EnvsDirectoryName, d.Config.Environment, common.FluxCDDirectoryName)
 	err = os.MkdirAll(fluxCDEnvDir, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create fluxcd environment directory: %w", err)
 	}
 
 	// Create directory <templatesDir>/resources/fluxcd
-	fluxCDResourcesDir := filepath.Join(d.templatesDir, ResourcesDirectoryName, FluxCDDirectoryName)
+	fluxCDResourcesDir := filepath.Join(d.templatesDir, common.ResourcesDirectoryName, common.FluxCDDirectoryName)
 	err = os.MkdirAll(fluxCDResourcesDir, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create fluxcd resources directory: %w", err)
@@ -173,13 +162,13 @@ func (d *FluxDeployer) ArrangeTemplates() (err error) {
 	d.log.Debug("Copying template files to target directories")
 
 	// copy all files from <downloadDir>/templates/overlays to <templatesDir>/envs/<envName>/fluxcd
-	err = util.CopyDir(filepath.Join(d.downloadDir, TemplatesDirectoryName, OverlaysDirectoryName), fluxCDEnvDir)
+	err = util.CopyDir(filepath.Join(d.downloadDir, common.TemplatesDirectoryName, common.OverlaysDirectoryName), fluxCDEnvDir)
 	if err != nil {
 		return fmt.Errorf("failed to copy fluxcd overlays: %w", err)
 	}
 
 	// copy all files from <downloadDir>/templates/resources to <templatesDir>/resources/fluxcd
-	err = util.CopyDir(filepath.Join(d.downloadDir, TemplatesDirectoryName, ResourcesDirectoryName), fluxCDResourcesDir)
+	err = util.CopyDir(filepath.Join(d.downloadDir, common.TemplatesDirectoryName, common.ResourcesDirectoryName), fluxCDResourcesDir)
 	if err != nil {
 		return fmt.Errorf("failed to copy fluxcd resources: %w", err)
 	}
@@ -192,23 +181,15 @@ func (d *FluxDeployer) ArrangeTemplates() (err error) {
 // The resulting files are written to the repo directory.
 func (d *FluxDeployer) Template() (err error) {
 	d.log.Infof("Applying templates from %s to deployment repository", d.Config.Component.FluxcdTemplateResourcePath)
-	templateInput := template.NewTemplateInput()
+	templateInput := common.NewTemplateInputFromConfig(d.Config)
 
-	templateInput.SetImagePullSecrets(d.Config.ImagePullSecrets)
-
-	templateInput["fluxCDEnvPath"] = "./" + EnvsDirectoryName + "/" + d.Config.Environment + "/" + FluxCDDirectoryName
-	templateInput["gitRepoEnvBranch"] = d.Config.DeploymentRepository.RepoBranch
-	templateInput["fluxCDResourcesPath"] = "../../../" + ResourcesDirectoryName + "/" + FluxCDDirectoryName
-
-	templateInput.SetGitRepo(d.Config.DeploymentRepository)
-
-	if err = templateInput.AddImageResource(d.fluxcdCV, FluxCDSourceControllerResourceName, "sourceController"); err != nil {
+	if err = templateInput.AddImageResource(d.fluxcdCV, common.FluxCDSourceControllerResourceName, "sourceController"); err != nil {
 		return fmt.Errorf("failed to apply fluxcd source controller template input: %w", err)
 	}
-	if err = templateInput.AddImageResource(d.fluxcdCV, FluxCDKustomizationControllerResourceName, "kustomizeController"); err != nil {
+	if err = templateInput.AddImageResource(d.fluxcdCV, common.FluxCDKustomizationControllerResourceName, "kustomizeController"); err != nil {
 		return fmt.Errorf("failed to apply fluxcd kustomize controller template input: %w", err)
 	}
-	if err = templateInput.AddImageResource(d.fluxcdCV, FluxCDHelmControllerResourceName, "helmController"); err != nil {
+	if err = templateInput.AddImageResource(d.fluxcdCV, common.FluxCDHelmControllerResourceName, "helmController"); err != nil {
 		return fmt.Errorf("failed to apply fluxcd helm controller template input: %w", err)
 	}
 

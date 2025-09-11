@@ -1,4 +1,4 @@
-package template
+package common
 
 import (
 	"fmt"
@@ -8,11 +8,39 @@ import (
 	"github.com/openmcp-project/bootstrapper/internal/util"
 )
 
+type TemplateInput map[string]any
+
 func NewTemplateInput() TemplateInput {
 	return make(TemplateInput)
 }
 
-type TemplateInput map[string]any
+func NewTemplateInputFromConfig(c *config.BootstrapperConfig) TemplateInput {
+	t := TemplateInput{
+		"fluxCDEnvPath":       "./" + EnvsDirectoryName + "/" + c.Environment + "/" + FluxCDDirectoryName,
+		"fluxCDResourcesPath": "../../../" + ResourcesDirectoryName + "/" + FluxCDDirectoryName,
+
+		"git": map[string]interface{}{
+			"repoUrl":    c.DeploymentRepository.RepoURL,
+			"mainBranch": c.DeploymentRepository.RepoBranch,
+		},
+		"gitRepoEnvBranch": c.DeploymentRepository.RepoBranch,
+
+		"imagePullSecrets": func() []map[string]string {
+			if len(c.ImagePullSecrets) == 0 {
+				return nil
+			}
+			secrets := make([]map[string]string, 0, len(c.ImagePullSecrets))
+			for _, secret := range c.ImagePullSecrets {
+				secrets = append(secrets, map[string]string{
+					"name": secret,
+				})
+			}
+			return secrets
+		}(),
+	}
+
+	return t
+}
 
 func (t TemplateInput) AddImageResource(cv *ocmcli.ComponentVersion, resourceName, key string) error {
 	resource, err := cv.GetResource(resourceName)
@@ -36,22 +64,8 @@ func (t TemplateInput) AddImageResource(cv *ocmcli.ComponentVersion, resourceNam
 	return nil
 }
 
-func (t TemplateInput) SetImagePullSecrets(imagePullSecrets []string) {
-	if len(imagePullSecrets) == 0 {
-		return
-	}
-
-	t["imagePullSecrets"] = make([]map[string]string, 0, len(imagePullSecrets))
-	for _, secret := range imagePullSecrets {
-		t["imagePullSecrets"] = append(t["imagePullSecrets"].([]map[string]string), map[string]string{
-			"name": secret,
-		})
-	}
-}
-
-func (t TemplateInput) SetGitRepo(repo config.DeploymentRepository) {
-	t["git"] = map[string]interface{}{
-		"repoUrl":    repo.RepoURL,
-		"mainBranch": repo.RepoBranch,
+func (t TemplateInput) ValuesWrapper() map[string]any {
+	return map[string]any{
+		"Values": t,
 	}
 }
