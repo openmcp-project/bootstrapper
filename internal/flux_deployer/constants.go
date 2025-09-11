@@ -8,8 +8,16 @@ const (
 	// The secret is references in the GitRepository resource which establishes the synchronization with the deployment git repository.
 	GitSecretName = "git"
 
-	// Names of ocm resources of the root component
-	FluxcdHelmController      = "fluxcd-helm-controller"
-	FluxcdKustomizeController = "fluxcd-kustomize-controller"
-	FluxcdSourceController    = "fluxcd-source-controller"
+	// Directory names
+	EnvsDirectoryName      = "envs"
+	FluxCDDirectoryName    = "fluxcd"
+	OpenMCPDirectoryName   = "openmcp"
+	ResourcesDirectoryName = "resources"
+	TemplatesDirectoryName = "templates"
+	OverlaysDirectoryName  = "overlays"
+
+	// Resource names
+	FluxCDSourceControllerResourceName        = "fluxcd-source-controller"
+	FluxCDKustomizationControllerResourceName = "fluxcd-kustomize-controller"
+	FluxCDHelmControllerResourceName          = "fluxcd-helm-controller"
 )

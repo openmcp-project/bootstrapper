@@ -8,7 +8,7 @@ import (
 
 // GetFluxCDImages retrieves the images of the FluxCD controllers from the root component version.
 func GetFluxCDImages(rootCV *ocmcli.ComponentVersion) (map[string]any, error) {
-	return GetImages(rootCV, FluxcdHelmController, FluxcdKustomizeController, FluxcdSourceController)
+	return GetImages(rootCV, FluxCDHelmControllerResourceName, FluxCDKustomizationControllerResourceName, FluxCDSourceControllerResourceName)
 }
 
 // GetImages retrieves the images references for a list of resources of a component version.

@@ -13,13 +13,13 @@ func TestGetFluxCDImages(t *testing.T) {
 
 	imageMap, err := flux_deployer.GetFluxCDImages(cv)
 	assert.NoError(t, err, "error getting images")
-	img, found := imageMap[flux_deployer.FluxcdSourceController]
+	img, found := imageMap[flux_deployer.FluxCDSourceControllerResourceName]
 	assert.True(t, found, "fluxcd source controller image should be found")
 	assert.Equal(t, "test-source-controller-image:v0.0.1", img, "fluxcd source controller image should match")
-	img, found = imageMap[flux_deployer.FluxcdHelmController]
+	img, found = imageMap[flux_deployer.FluxCDHelmControllerResourceName]
 	assert.True(t, found, "fluxcd helm controller image should be found")
 	assert.Equal(t, "test-helm-controller-image:v0.0.1", img, "fluxcd helm controller image should match")
-	img, found = imageMap[flux_deployer.FluxcdKustomizeController]
+	img, found = imageMap[flux_deployer.FluxCDKustomizationControllerResourceName]
 	assert.True(t, found, "fluxcd kustomize controller image should be found")
 	assert.Equal(t, "test-kustomize-controller-image:v0.0.1", img, "fluxcd kustomize controller image should match")
 }

@@ -7,14 +7,13 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/openmcp-project/bootstrapper/internal/common"
 	"github.com/openmcp-project/bootstrapper/internal/template"
 )
 
 // TemplateDirectory processes the template files in the specified directory and writes
 // the rendered content to the corresponding files in the Git repository's worktree.
 // It uses the provided template directory and Git repository to perform the operations.
-func TemplateDirectory(templateDirectory string, templateInput common.TemplateInput, repo string, logger *logrus.Logger) error {
+func TemplateDirectory(templateDirectory string, templateInput TemplateInput, repo string, logger *logrus.Logger) error {
 
 	templateDir, err := os.Open(templateDirectory)
 	if err != nil {

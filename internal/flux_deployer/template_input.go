@@ -1,4 +1,4 @@
-package common
+package flux_deployer
 
 import (
 	"fmt"
@@ -16,8 +16,9 @@ func NewTemplateInput() TemplateInput {
 
 func NewTemplateInputFromConfig(c *config.BootstrapperConfig) TemplateInput {
 	t := TemplateInput{
-		"fluxCDEnvPath":       "./" + EnvsDirectoryName + "/" + c.Environment + "/" + FluxCDDirectoryName,
-		"fluxCDResourcesPath": "../../../" + ResourcesDirectoryName + "/" + FluxCDDirectoryName,
+		"fluxCDEnvPath":        "./" + EnvsDirectoryName + "/" + c.Environment + "/" + FluxCDDirectoryName,
+		"fluxCDResourcesPath":  "../../../" + ResourcesDirectoryName + "/" + FluxCDDirectoryName,
+		"openMCPResourcesPath": "../../../" + ResourcesDirectoryName + "/" + OpenMCPDirectoryName,
 
 		"git": map[string]interface{}{
 			"repoUrl":    c.DeploymentRepository.RepoURL,
@@ -25,18 +26,7 @@ func NewTemplateInputFromConfig(c *config.BootstrapperConfig) TemplateInput {
 		},
 		"gitRepoEnvBranch": c.DeploymentRepository.RepoBranch,
 
-		"imagePullSecrets": func() []map[string]string {
-			if len(c.ImagePullSecrets) == 0 {
-				return nil
-			}
-			secrets := make([]map[string]string, 0, len(c.ImagePullSecrets))
-			for _, secret := range c.ImagePullSecrets {
-				secrets = append(secrets, map[string]string{
-					"name": secret,
-				})
-			}
-			return secrets
-		}(),
+		"imagePullSecrets": wrapImagePullSecrets(c.ImagePullSecrets),
 	}
 
 	return t
@@ -68,4 +58,14 @@ func (t TemplateInput) ValuesWrapper() map[string]any {
 	return map[string]any{
 		"Values": t,
 	}
+}
+
+func wrapImagePullSecrets(secrets []string) []map[string]string {
+	wrappedSecrets := make([]map[string]string, len(secrets))
+	for i, secret := range secrets {
+		wrappedSecrets[i] = map[string]string{
+			"name": secret,
+		}
+	}
+	return wrappedSecrets
 }
