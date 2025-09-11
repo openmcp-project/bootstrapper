@@ -26,7 +26,7 @@ const (
 // The file should contain a YAML of a map[string]string, whose keys are described
 // in https://fluxcd.io/flux/components/source/gitrepositories/#secret-reference, e.g. username and password.
 func CreateGitCredentialsSecret(ctx context.Context, log *logrus.Logger, gitCredentialsPath string, secretName, secretNamespace string, platformClient client.Client) error {
-	log.Debug("Creating or updating git credentials secret")
+	log.Infof("Creating/updating git credentials secret %s/%s", secretNamespace, secretName)
 
 	gitCredentialsData := map[string][]byte{}
 
@@ -80,5 +80,6 @@ func CreateGitCredentialsSecret(ctx context.Context, log *logrus.Logger, gitCred
 		return fmt.Errorf("error creating or updating git credentials secret: %w", err)
 	}
 
+	log.Infof("Created/updated git credentials secret %s/%s", secretNamespace, secretName)
 	return nil
 }
