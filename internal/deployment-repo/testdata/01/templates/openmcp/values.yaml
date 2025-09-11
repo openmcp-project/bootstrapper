@@ -1,0 +1,46 @@
+---
+openmcpOperator:
+    image: ghcr.io/openmcp-project/images/openmcp-operator
+    tag: v0.9.1
+    environment: dev
+    config:
+        managedControlPlane:
+            mcpClusterPurpose: mcp-worker
+            reconcileMCPEveryXDays: 7
+        scheduler:
+            scope: Cluster
+            purposeMappings:
+                mcp:
+                    template:
+                        spec:
+                        profile: env.cpname.mcpds-workerless
+                        tenancy: Exclusive
+                mcp-worker:
+                    template:
+                        spec:
+                        profile: env.cpname.mcpds-small
+                        tenancy: Exclusive
+                platform:
+                    template:
+                        metadata:
+                        labels:
+                            clusters.openmcp.cloud/delete-without-requests: "false"
+                        spec:
+                        profile: env.cpname.mcpd-large
+                        tenancy: Shared
+                onboarding:
+                    template:
+                        metadata:
+                        labels:
+                            clusters.openmcp.cloud/delete-without-requests: "false"
+                        spec:
+                        profile: env.cpname.mcpd-workerless
+                        tenancy: Shared
+                workload:
+                    tenancyCount: 20
+                    template:
+                        metadata:
+                        namespace: workload-clusters
+                        spec:
+                        profile: env.cpname.mcpd-small
+                        tenancy: Shared

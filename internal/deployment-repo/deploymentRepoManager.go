@@ -3,14 +3,17 @@ package deploymentrepo
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-git/v5"
 	"github.com/openmcp-project/controller-utils/pkg/clusters"
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
+	"sigs.k8s.io/yaml"
 
 	"github.com/openmcp-project/bootstrapper/internal/config"
 
@@ -18,6 +21,8 @@ import (
 	"github.com/openmcp-project/bootstrapper/internal/log"
 	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
 	"github.com/openmcp-project/bootstrapper/internal/util"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 const (
@@ -26,11 +31,12 @@ const (
 	FluxCDKustomizationControllerResourceName = "fluxcd-kustomize-controller"
 	FluxCDHelmControllerResourceName          = "fluxcd-helm-controller"
 
-	EnvsDirectoryName      = "envs"
-	ResourcesDirectoryName = "resources"
-	OpenMCPDirectoryName   = "openmcp"
-	FluxCDDirectoryName    = "fluxcd"
-	CRDsDirectoryName      = "crds"
+	EnvsDirectoryName       = "envs"
+	ResourcesDirectoryName  = "resources"
+	OpenMCPDirectoryName    = "openmcp"
+	FluxCDDirectoryName     = "fluxcd"
+	CRDsDirectoryName       = "crds"
+	ExtraManifestsDirectory = "extra"
 )
 
 // DeploymentRepoManager manages the deployment repository by applying templates and committing changes.
@@ -43,10 +49,14 @@ type DeploymentRepoManager struct {
 	// +optional
 	OcmConfigPath string
 
+	// Config is the bootstrapper configuration
 	Config *config.BootstrapperConfig
 
 	// TargetCluster is the Kubernetes cluster to which the deployment will be applied
 	TargetCluster *clusters.Cluster
+
+	// ExtraManifestDir is an optional directory containing extra manifests to be added to the deployment repository
+	ExtraManifestDir string
 
 	// Internals
 	// workDir is a temporary directory used for processing
@@ -70,15 +80,18 @@ type DeploymentRepoManager struct {
 	fluxcdCV *ocmcli.ComponentVersion
 	// crdFiles is a list of CRD files downloaded from the openmcp-operator component
 	crdFiles []string
+	// extraManifests is a list of extra manifest files copied from the ExtraManifestDir to the deployment repository
+	extraManifests []string
 }
 
 // NewDeploymentRepoManager creates a new DeploymentRepoManager with the specified parameters.
-func NewDeploymentRepoManager(config *config.BootstrapperConfig, targetCluster *clusters.Cluster, gitConfigPath, ocmConfigPath string) *DeploymentRepoManager {
+func NewDeploymentRepoManager(config *config.BootstrapperConfig, targetCluster *clusters.Cluster, gitConfigPath, ocmConfigPath, extraManifestDir string) *DeploymentRepoManager {
 	return &DeploymentRepoManager{
-		Config:        config,
-		TargetCluster: targetCluster,
-		GitConfigPath: gitConfigPath,
-		OcmConfigPath: ocmConfigPath,
+		Config:           config,
+		TargetCluster:    targetCluster,
+		GitConfigPath:    gitConfigPath,
+		OcmConfigPath:    ocmConfigPath,
+		ExtraManifestDir: extraManifestDir,
 	}
 }
 
@@ -180,7 +193,7 @@ func (m *DeploymentRepoManager) Cleanup() {
 func (m *DeploymentRepoManager) ApplyTemplates(ctx context.Context) error {
 	logger := log.GetLogger()
 
-	logger.Infof("Applying templates from %s/%s to deployment repository", m.Config.Component.FluxcdTemplateResourcePath, m.Config.Component.OpenMCPOperatorTemplateResourcePath)
+	logger.Infof("Applying templates from %q/%q to deployment repository", m.Config.Component.FluxcdTemplateResourcePath, m.Config.Component.OpenMCPOperatorTemplateResourcePath)
 	templateInput := make(map[string]interface{})
 
 	openMCPOperatorImageResources := m.openMCPOperatorCV.GetResourcesByType(ocmcli.OCIImageResourceType)
@@ -243,39 +256,6 @@ func (m *DeploymentRepoManager) ApplyTemplates(ctx context.Context) error {
 		return fmt.Errorf("failed to apply templates from directory %s: %w", m.templatesDir, err)
 	}
 
-	/*
-		workTree, err := m.gitRepo.Worktree()
-		if err != nil {
-			return fmt.Errorf("failed to get worktree: %w", err)
-		}
-
-		workTreePath := filepath.Join(ResourcesDirectoryName, OpenMCPDirectoryName, "extra")
-
-			for _, manifest := range m.Config.OpenMCPOperator.Manifests {
-				workTreeFile := filepath.Join(workTreePath, manifest.Name+".yaml")
-				logger.Infof("Applying openmcp-operator manifest %s to deployment repository", manifest.Name)
-
-				manifestRaw, err := yaml.Marshal(manifest.ManifestParsed)
-				if err != nil {
-					return fmt.Errorf("failed to marshal openmcp-operator manifest %s: %w", manifest.Name, err)
-				}
-
-				err = os.MkdirAll(filepath.Join(m.gitRepoDir, workTreePath), 0755)
-				if err != nil {
-					return fmt.Errorf("failed to create directory %s in deployment repository: %w", workTreePath, err)
-				}
-
-				err = os.WriteFile(filepath.Join(m.gitRepoDir, workTreeFile), manifestRaw, 0o644)
-				if err != nil {
-					return fmt.Errorf("failed to write openmcp-operator manifest %s to deployment repository: %w", manifest.Name, err)
-				}
-				_, err = workTree.Add(workTreePath)
-				if err != nil {
-					return fmt.Errorf("failed to add openmcp-operator manifest %s to git index: %w", manifest.Name, err)
-				}
-			}
-	*/
-
 	return nil
 }
 
@@ -322,48 +302,96 @@ func (m *DeploymentRepoManager) ApplyCustomResourceDefinitions(ctx context.Conte
 		return nil
 	}
 
+	crdDirectory := filepath.Join(m.gitRepoDir, ResourcesDirectoryName, OpenMCPDirectoryName, CRDsDirectoryName)
+
 	logger.Infof("Applying Custom Resource Definitions to deployment repository")
 
-	crdsDownloadDir := filepath.Join(m.gitRepoDir, ResourcesDirectoryName, OpenMCPDirectoryName, CRDsDirectoryName)
+	err := m.applyCRDsForComponentVersion(ctx, m.openMCPOperatorCV, crdDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to apply CRDs for openmcp-operator component: %w", err)
+	}
 
-	// if the CRDs directory already exists, remove it to ensure a clean state
-	if _, err := os.Stat(crdsDownloadDir); err == nil {
-		err = os.RemoveAll(crdsDownloadDir)
+	for _, clusterProvider := range m.Config.Providers.ClusterProviders {
+		clusterProviderCV, err := m.compGetter.GetReferencedComponentVersionRecursive(ctx, m.compGetter.RootComponentVersion(), "cluster-provider-"+clusterProvider)
 		if err != nil {
-			return fmt.Errorf("failed to remove existing CRD directory: %w", err)
+			return fmt.Errorf("failed to get component version for cluster provider %s: %w", clusterProvider, err)
+		}
+
+		err = m.applyCRDsForComponentVersion(ctx, clusterProviderCV, crdDirectory)
+		if err != nil {
+			logger.Warnf("Failed to apply CRDs for cluster provider %s: %v", clusterProvider, err)
 		}
 	}
 
-	err := os.Mkdir(crdsDownloadDir, 0o755)
-	if err != nil {
-		return fmt.Errorf("failed to create CRD download directory: %w", err)
+	for _, serviceProvider := range m.Config.Providers.ServiceProviders {
+		serviceProviderCV, err := m.compGetter.GetReferencedComponentVersionRecursive(ctx, m.compGetter.RootComponentVersion(), "service-provider-"+serviceProvider)
+		if err != nil {
+			return fmt.Errorf("failed to get component version for service provider %s: %w", serviceProvider, err)
+		}
+		err = m.applyCRDsForComponentVersion(ctx, serviceProviderCV, crdDirectory)
+		if err != nil {
+			logger.Warnf("Failed to apply CRDs for service provider %s: %v", serviceProvider, err)
+		}
 	}
 
-	err = m.compGetter.DownloadDirectoryResource(ctx, m.openMCPOperatorCV, "openmcp-operator-crds", crdsDownloadDir)
-	if err != nil {
-		return fmt.Errorf("failed to download CRD resource: %w", err)
+	for _, platformService := range m.Config.Providers.PlatformServices {
+		platformServiceCV, err := m.compGetter.GetReferencedComponentVersionRecursive(ctx, m.compGetter.RootComponentVersion(), "platform-service-"+platformService)
+		if err != nil {
+			return fmt.Errorf("failed to get component version for platform service %s: %w", platformService, err)
+		}
+		err = m.applyCRDsForComponentVersion(ctx, platformServiceCV, crdDirectory)
+		if err != nil {
+			logger.Warnf("Failed to apply CRDs for platform service %s: %v", platformService, err)
+		}
 	}
 
-	// List all YAML files in the CRDs download directory
-	entries, err := os.ReadDir(crdsDownloadDir)
+	entries, err := os.ReadDir(crdDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to read CRD download directory: %w", err)
 	}
 
-	m.crdFiles = make([]string, 0)
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			fileName := entry.Name()
-			// Check if file has .yaml or .yml extension
 			if filepath.Ext(fileName) == ".yaml" || filepath.Ext(fileName) == ".yml" {
-				filePath := filepath.Join(crdsDownloadDir, fileName)
-				m.crdFiles = append(m.crdFiles, filePath)
-				logger.Tracef("Added CRD file: %s", filePath)
+				// parse file into unstructured object
+				filePath := filepath.Join(crdDirectory, fileName)
+				file, err := os.Open(filePath)
+				if err != nil {
+					return fmt.Errorf("failed to open CRD file %s: %w", filePath, err)
+				}
+				defer func(path string) {
+					err := file.Close()
+					if err != nil {
+						_, _ = fmt.Fprintf(os.Stderr, "failed to close CRD file %s: %v\n", path, err)
+					}
+				}(filePath)
+
+				manifestBytes, err := io.ReadAll(file)
+				if err != nil {
+					return fmt.Errorf("failed to read CRD file %s: %w", filePath, err)
+				}
+
+				var manifest unstructured.Unstructured
+				err = yaml.Unmarshal(manifestBytes, &manifest)
+				if err != nil {
+					return fmt.Errorf("failed to unmarshal CRD file %s: %w", filePath, err)
+				}
+
+				if !crdIsForPlatformCluster(&manifest) {
+					// if the CRD is not for the platform cluster, remove it
+					logger.Tracef("Removing CRD file %s as it is not for the platform cluster", filePath)
+					err = os.Remove(filePath)
+					if err != nil {
+						return fmt.Errorf("failed to remove CRD file %s: %w", filePath, err)
+					}
+				} else {
+					logger.Tracef("Added CRD file: %s", filePath)
+					m.crdFiles = append(m.crdFiles, filePath)
+				}
 			}
 		}
 	}
-
-	logger.Infof("Found %d CRD files", len(m.crdFiles))
 
 	workTree, err := m.gitRepo.Worktree()
 	if err != nil {
@@ -378,18 +406,93 @@ func (m *DeploymentRepoManager) ApplyCustomResourceDefinitions(ctx context.Conte
 	return nil
 }
 
+func (m *DeploymentRepoManager) applyCRDsForComponentVersion(ctx context.Context, cv *ocmcli.ComponentVersion, targetDirectory string) error {
+	logger := log.GetLogger()
+
+	lastSlash := strings.LastIndex(cv.Component.Name, "/")
+	if lastSlash == -1 {
+		return fmt.Errorf("invalid component name: %s", cv.Component.Name)
+	}
+
+	crdResourceName := cv.Component.Name[lastSlash+1:] + "-crds"
+
+	logger.Debugf("Applying CRDs for component %s from resource %s to directory %s", cv.Component.Name, crdResourceName, targetDirectory)
+
+	err := m.compGetter.DownloadDirectoryResource(ctx, cv, crdResourceName, targetDirectory)
+	if err != nil {
+		return fmt.Errorf("failed to download CRD resource: %w", err)
+	}
+
+	return nil
+}
+
+func crdIsForPlatformCluster(crd *unstructured.Unstructured) bool {
+	labels := crd.GetLabels()
+	if labels == nil {
+		return false
+	}
+	if val, ok := labels["openmcp.cloud/cluster"]; ok && val == "platform" {
+		return true
+	}
+	return false
+}
+
+// ApplyExtraManifests copies extra manifests from the specified directory to the deployment repository and stages them for commit.
+func (m *DeploymentRepoManager) ApplyExtraManifests(_ context.Context) error {
+	logger := log.GetLogger()
+	if len(m.ExtraManifestDir) == 0 {
+		logger.Infof("No extra manifest directory specified, skipping")
+		return nil
+	}
+
+	// if an extra manifest directory is specified, copy its contents to the deployment repository
+	logger.Infof("Applying extra manifests from %s to deployment repository", m.ExtraManifestDir)
+	err := util.CopyDir(m.ExtraManifestDir, filepath.Join(m.gitRepoDir, ResourcesDirectoryName, OpenMCPDirectoryName, ExtraManifestsDirectory))
+	if err != nil {
+		return fmt.Errorf("failed to copy extra manifests from %s to deployment repository: %w", m.ExtraManifestDir, err)
+	}
+	workTree, err := m.gitRepo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree: %w", err)
+	}
+	_, err = workTree.Add(filepath.Join(ResourcesDirectoryName, OpenMCPDirectoryName, ExtraManifestsDirectory))
+	if err != nil {
+		return fmt.Errorf("failed to add extra manifests to git index: %w", err)
+	}
+
+	entries, err := os.ReadDir(m.ExtraManifestDir)
+	if err != nil {
+		return fmt.Errorf("failed to read extra manifest directory: %w", err)
+	}
+
+	m.extraManifests = make([]string, 0)
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			fileName := entry.Name()
+			// Check if file has .yaml or .yml extension
+			if filepath.Ext(fileName) == ".yaml" || filepath.Ext(fileName) == ".yml" {
+				m.extraManifests = append(m.extraManifests, fileName)
+				logger.Tracef("Added extra manifest: %s", fileName)
+			}
+		}
+	}
+
+	return nil
+}
+
 func (m *DeploymentRepoManager) UpdateResourcesKustomization() error {
 	logger := log.GetLogger()
 	files := make([]string, 0,
 		len(m.Config.Providers.ClusterProviders)+
 			len(m.Config.Providers.ServiceProviders)+
 			len(m.Config.Providers.PlatformServices)+
-			len(m.crdFiles))
-
-	// len(m.Config.OpenMCPOperator.Manifests))
+			len(m.crdFiles)+
+			len(m.extraManifests))
 
 	for _, crdFile := range m.crdFiles {
-		files = append(files, filepath.Join(CRDsDirectoryName, filepath.Base(crdFile)))
+		// get the path relative to the git repo dir
+		crdFile = strings.TrimPrefix(crdFile, filepath.Join(m.gitRepoDir, ResourcesDirectoryName, OpenMCPDirectoryName)+string(os.PathSeparator))
+		files = append(files, crdFile)
 	}
 
 	for _, clusterProvider := range m.Config.Providers.ClusterProviders {
@@ -404,11 +507,9 @@ func (m *DeploymentRepoManager) UpdateResourcesKustomization() error {
 		files = append(files, filepath.Join("platform-services", platformService+".yaml"))
 	}
 
-	/*
-		for _, manifest := range m.Config.OpenMCPOperator.Manifests {
-			files = append(files, filepath.Join("extra", manifest.Name+".yaml"))
-		}
-	*/
+	for _, manifest := range m.extraManifests {
+		files = append(files, filepath.Join(ExtraManifestsDirectory, filepath.Base(manifest)))
+	}
 
 	// open resources root customization
 	resourcesRootKustomizationPath := filepath.Join(ResourcesDirectoryName, OpenMCPDirectoryName, "kustomization.yaml")
@@ -456,6 +557,7 @@ func (m *DeploymentRepoManager) UpdateResourcesKustomization() error {
 	return nil
 }
 
+// RunKustomizeAndApply runs kustomize on the environment directory and applies the resulting manifests to the target cluster.
 func (m *DeploymentRepoManager) RunKustomizeAndApply(ctx context.Context) error {
 	logger := log.GetLogger()
 	fs := filesys.MakeFsOnDisk()
@@ -500,6 +602,7 @@ func (m *DeploymentRepoManager) CommitAndPushChanges(_ context.Context) error {
 	return nil
 }
 
+// GitRepoDir returns the path to the cloned deployment repository.
 func (m *DeploymentRepoManager) GitRepoDir() string {
 	return m.gitRepoDir
 }

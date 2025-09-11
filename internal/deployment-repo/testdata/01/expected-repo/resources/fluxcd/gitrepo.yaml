@@ -1,0 +1,13 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: environments
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: {{GIT_REPO_URL}}
+  ref:
+    branch: incoming
+  secretRef:
+    name: git

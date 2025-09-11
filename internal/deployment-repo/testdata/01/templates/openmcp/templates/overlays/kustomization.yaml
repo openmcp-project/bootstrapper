@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - {{ .Values.openMCPResourcesPath }}
+images:
+  - name: <openmcp/openmcp-operator>
+    newName: {{.Values.openmcpOperator.image }}
+    newTag: {{.Values.openmcpOperator.tag | default "latest"}}
+    {{- if .Values.openmcpOperator.digest }}
+    digest: {{ .Values.openmcpOperator.digest }}
+    {{- end }}
+secretGenerator:
+  - name: openmcp-operator-config
+    namespace: openmcp-system
+    files:
+      - config=config/openmcp-operator-config.yaml

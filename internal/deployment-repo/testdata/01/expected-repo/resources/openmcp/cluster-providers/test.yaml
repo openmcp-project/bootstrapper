@@ -1,0 +1,9 @@
+apiVersion: openmcp.cloud/v1alpha1
+kind: ClusterProvider
+metadata:
+  name: "test"
+spec:
+  image: "ghcr.io/openmcp-project/images/cluster-provider-test:v0.1.0"
+  imagePullSecrets:
+    - name: "imgpull-a"
+    - name: "imgpull-b"

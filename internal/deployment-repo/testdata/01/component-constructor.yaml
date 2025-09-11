@@ -21,9 +21,31 @@ components:
         name: platform-service-test
         version: v0.3.0
 
-      - componentName: github.com/openmcp-project/deployment-templates
-        name: deployment-templates
+      - componentName: github.com/openmcp-project/gitops-templates
+        name: gitops-templates
         version: v0.1.1
+
+    resources:
+      - name: fluxcd-source-controller
+        version: v1.6.2
+        type: ociImage
+        access:
+          type: ociArtifact
+          imageReference: ghcr.io/fluxcd/source-controller:v1.6.2
+
+      - name: fluxcd-kustomize-controller
+        version: v1.6.1
+        type: ociImage
+        access:
+          type: ociArtifact
+          imageReference: ghcr.io/fluxcd/kustomize-controller:v1.6.1
+
+      - name: fluxcd-helm-controller
+        version: v1.3.0
+        type: ociImage
+        access:
+          type: ociArtifact
+          imageReference: ghcr.io/fluxcd/helm-controller:v1.3.0
 
   - name: github.com/openmcp-project/openmcp-operator
     version: v0.2.1
@@ -43,7 +65,7 @@ components:
         version: v0.1.1
         input:
           type: dir
-          path: ./crds
+          path: ./crds/openmcp-operator
 
   - name: github.com/openmcp-project/cluster-provider-test
     version: v0.1.0
@@ -57,6 +79,13 @@ components:
         access:
           type: ociArtifact
           imageReference: ghcr.io/openmcp-project/images/cluster-provider-test:v0.1.0
+
+      - name: cluster-provider-test-crds
+        type: fileSystem
+        version: v0.1.1
+        input:
+          type: dir
+          path: ./crds/cluster-provider-test
 
   - name: github.com/openmcp-project/service-provider-test
     version: v0.2.0
@@ -84,15 +113,22 @@ components:
           type: ociArtifact
           imageReference: ghcr.io/openmcp-project/images/platform-service-test:v0.3.0
 
-  - name: github.com/openmcp-project/deployment-templates
+  - name: github.com/openmcp-project/gitops-templates
     version: v0.1.1
     provider:
       name: openmcp-project
 
     resources:
-      - name: templates
+      - name: fluxcd
         type: fileSystem
         version: v0.1.1
         input:
           type: dir
-          path: ./templates
+          path: ./templates/fluxcd
+
+      - name: openmcp
+        type: fileSystem
+        version: v0.1.1
+        input:
+          type: dir
+          path: ./templates/openmcp
