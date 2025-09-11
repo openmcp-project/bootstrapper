@@ -11,9 +11,9 @@ import (
 )
 
 // TemplateDirectory processes the template files in the specified directory and writes
-// the rendered content to the corresponding files in the Git repository's worktree.
-// It uses the provided template directory and Git repository to perform the operations.
-func TemplateDirectory(templateDirectory string, templateInput TemplateInput, repo string, logger *logrus.Logger) error {
+// the rendered content to the corresponding files in the result directory.
+func TemplateDirectory(templateDirectory, resultDirectory string, templateInput TemplateInput, log *logrus.Logger) error {
+	log.Debug("Templating")
 
 	templateDir, err := os.Open(templateDirectory)
 	if err != nil {
@@ -47,7 +47,7 @@ func TemplateDirectory(templateDirectory string, templateInput TemplateInput, re
 		if errInWalk != nil {
 			return fmt.Errorf("failed to get relative path for %s: %w", path, errInWalk)
 		}
-		pathInWorkTree := filepath.Join(repo, relativePath)
+		pathInWorkTree := filepath.Join(resultDirectory, relativePath)
 
 		if d.IsDir() {
 			err = os.MkdirAll(pathInWorkTree, 0755)
@@ -55,7 +55,7 @@ func TemplateDirectory(templateDirectory string, templateInput TemplateInput, re
 				return fmt.Errorf("failed to create directory %s: %w", path, err)
 			}
 		} else {
-			logger.Debugf("Found template file: %s", relativePath)
+			log.Debugf("Found template file: %s", relativePath)
 
 			templateFromFile, errInWalk = os.ReadFile(path)
 			if errInWalk != nil {
@@ -91,5 +91,6 @@ func TemplateDirectory(templateDirectory string, templateInput TemplateInput, re
 		return fmt.Errorf("failed to walk template directory: %w", err)
 	}
 
+	log.Debug("Templating done")
 	return nil
 }
