@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/openmcp-project/controller-utils/pkg/clusters"
+	"github.com/openmcp-project/controller-utils/pkg/resources"
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
@@ -50,6 +51,11 @@ func NewFluxDeployer(config *cfg.BootstrapperConfig, gitConfigPath, ocmConfigPat
 }
 
 func (d *FluxDeployer) Deploy(ctx context.Context) (err error) {
+	d.log.Infof("Ensure namespace %s exists", d.fluxNamespace)
+	namespaceMutator := resources.NewNamespaceMutator(d.fluxNamespace)
+	if err := resources.CreateOrUpdateResource(ctx, d.platformCluster.Client(), namespaceMutator); err != nil {
+		return fmt.Errorf("error creating/updating namespace %s: %w", d.fluxNamespace, err)
+	}
 
 	if err := CreateGitCredentialsSecret(ctx, d.log, d.GitConfigPath, GitSecretName, d.fluxNamespace, d.platformCluster.Client()); err != nil {
 		return err
