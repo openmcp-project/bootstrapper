@@ -56,9 +56,22 @@ func TestDeploymentRepoManager(t *testing.T) {
 			Config: json.RawMessage(`{"someKey": "someValue"}`),
 		},
 		Providers: config.Providers{
-			ClusterProviders: []string{"test"},
-			ServiceProviders: []string{"test"},
-			PlatformServices: []string{"test"},
+			ClusterProviders: []config.Provider{
+				{
+					Name:   "test",
+					Config: json.RawMessage(`{"verbosity": "info"}`),
+				},
+			},
+			ServiceProviders: []config.Provider{
+				{
+					Name: "test",
+				},
+			},
+			PlatformServices: []config.Provider{
+				{
+					Name: "test",
+				},
+			},
 		},
 		ImagePullSecrets: []string{"imgpull-a", "imgpull-b"},
 	}

@@ -5,3 +5,19 @@ resources:
   - rbac.yaml
   - namespace.yaml
   - deployment.yaml
+
+{{- if .Values.imagePullSecrets }}
+patches:
+  - target:
+      kind: Deployment
+    patch: |
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: this_value_is_ignored
+      spec:
+        template:
+          spec:
+            imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 14 }}
+{{- end }}
