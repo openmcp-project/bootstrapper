@@ -10,12 +10,6 @@ spec:
     - name: "{{ $value }}"
 {{- end }}
 {{- end }}
-{{- if dig "env" "" .values }}
-  env:
-{{- range $key, $value := .values.env }}
-    {{ $key }}: {{ $value }}
-{{- end }}
-{{- end }}
-{{- if dig "verbosity" "" .values }}
-  verbosity: {{ .values.verbosity }}
+{{- if dig "config" "" .values }}
+{{ toYaml .values.config | indent 2 }}
 {{- end }}

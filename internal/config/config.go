@@ -33,9 +33,15 @@ type TargetCluster struct {
 }
 
 type Providers struct {
-	ClusterProviders []string `json:"clusterProviders"`
-	ServiceProviders []string `json:"serviceProviders"`
-	PlatformServices []string `json:"platformServices"`
+	ClusterProviders []Provider `json:"clusterProviders"`
+	ServiceProviders []Provider `json:"serviceProviders"`
+	PlatformServices []Provider `json:"platformServices"`
+}
+
+type Provider struct {
+	Name         string          `json:"name"`
+	Config       json.RawMessage `json:"config"`
+	ConfigParsed map[string]interface{}
 }
 
 type OpenMCPOperator struct {
@@ -94,6 +100,45 @@ func (c *BootstrapperConfig) Validate() error {
 	err := yaml.Unmarshal(c.OpenMCPOperator.Config, &c.OpenMCPOperator.ConfigParsed)
 	if err != nil {
 		errs = append(errs, field.Invalid(field.NewPath("openmcpOperator.config"), string(c.OpenMCPOperator.Config), "openmcp operator config is not valid yaml"))
+	}
+
+	for i, cp := range c.Providers.ClusterProviders {
+		if len(cp.Name) == 0 {
+			errs = append(errs, field.Required(field.NewPath("providers.clusterProviders").Index(i).Child("name"), "cluster provider name is required"))
+		}
+
+		if cp.Config != nil {
+			err := yaml.Unmarshal(cp.Config, &c.Providers.ClusterProviders[i].ConfigParsed)
+			if err != nil {
+				errs = append(errs, field.Invalid(field.NewPath("providers.clusterProviders").Index(i).Child("config"), string(cp.Config), "cluster provider config is not valid yaml"))
+			}
+		}
+	}
+
+	for i, sp := range c.Providers.ServiceProviders {
+		if len(sp.Name) == 0 {
+			errs = append(errs, field.Required(field.NewPath("providers.serviceProviders").Index(i).Child("name"), "service provider name is required"))
+		}
+
+		if sp.Config != nil {
+			err := yaml.Unmarshal(sp.Config, &c.Providers.ServiceProviders[i].ConfigParsed)
+			if err != nil {
+				errs = append(errs, field.Invalid(field.NewPath("providers.serviceProviders").Index(i).Child("config"), string(sp.Config), "service provider config is not valid yaml"))
+			}
+		}
+	}
+
+	for i, ps := range c.Providers.PlatformServices {
+		if len(ps.Name) == 0 {
+			errs = append(errs, field.Required(field.NewPath("providers.platformServices").Index(i).Child("name"), "platform service name is required"))
+		}
+
+		if ps.Config != nil {
+			err := yaml.Unmarshal(ps.Config, &c.Providers.PlatformServices[i].ConfigParsed)
+			if err != nil {
+				errs = append(errs, field.Invalid(field.NewPath("providers.platformServices").Index(i).Child("config"), string(ps.Config), "platform service config is not valid yaml"))
+			}
+		}
 	}
 
 	return errs.ToAggregate()

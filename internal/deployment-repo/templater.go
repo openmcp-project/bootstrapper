@@ -10,6 +10,8 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-git/v5"
 
+	"github.com/openmcp-project/bootstrapper/internal/config"
+
 	"github.com/openmcp-project/bootstrapper/internal/log"
 	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
 	"github.com/openmcp-project/bootstrapper/internal/template"
@@ -119,10 +121,11 @@ type ProviderOptions struct {
 	Name             string
 	Image            string
 	ImagePullSecrets []string
+	Config           map[string]interface{}
 }
 
 // TemplateProviders templates the specified cluster providers, service providers, and platform services
-func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, platformServices, imagePullSecrets []string, ocmGetter *ocmcli.ComponentGetter, repo *git.Repository) error {
+func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, platformServices []config.Provider, imagePullSecrets []string, ocmGetter *ocmcli.ComponentGetter, repo *git.Repository) error {
 	basePath := filepath.Join("resources", "openmcp")
 	clusterProvidersDir := filepath.Join(basePath, "cluster-providers")
 	serviceProvidersDir := filepath.Join(basePath, "service-providers")
@@ -150,7 +153,7 @@ func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, 
 	}
 
 	for _, cp := range clusterProviders {
-		componentVersion, err := ocmGetter.GetReferencedComponentVersionRecursive(ctx, ocmGetter.RootComponentVersion(), "cluster-provider-"+cp)
+		componentVersion, err := ocmGetter.GetReferencedComponentVersionRecursive(ctx, ocmGetter.RootComponentVersion(), "cluster-provider-"+cp.Name)
 		if err != nil {
 			return fmt.Errorf("failed to get component version for cluster provider %s: %w", cp, err)
 		}
@@ -161,9 +164,10 @@ func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, 
 		}
 
 		opts := &ProviderOptions{
-			Name:             cp,
+			Name:             cp.Name,
 			Image:            *imageResource.Access.ImageReference,
 			ImagePullSecrets: imagePullSecrets,
+			Config:           cp.ConfigParsed,
 		}
 
 		err = templateProvider(opts, clusterProviderTemplate, clusterProvidersDir, repo)
@@ -173,7 +177,7 @@ func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, 
 	}
 
 	for _, sp := range serviceProviders {
-		componentVersion, err := ocmGetter.GetReferencedComponentVersionRecursive(ctx, ocmGetter.RootComponentVersion(), "service-provider-"+sp)
+		componentVersion, err := ocmGetter.GetReferencedComponentVersionRecursive(ctx, ocmGetter.RootComponentVersion(), "service-provider-"+sp.Name)
 		if err != nil {
 			return fmt.Errorf("failed to get component version for service provider %s: %w", sp, err)
 		}
@@ -184,9 +188,10 @@ func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, 
 		}
 
 		opts := &ProviderOptions{
-			Name:             sp,
+			Name:             sp.Name,
 			Image:            *imageResource.Access.ImageReference,
 			ImagePullSecrets: imagePullSecrets,
+			Config:           sp.ConfigParsed,
 		}
 
 		err = templateProvider(opts, serviceProviderTemplate, serviceProvidersDir, repo)
@@ -196,7 +201,7 @@ func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, 
 	}
 
 	for _, ps := range platformServices {
-		componentVersion, err := ocmGetter.GetReferencedComponentVersionRecursive(ctx, ocmGetter.RootComponentVersion(), "platform-service-"+ps)
+		componentVersion, err := ocmGetter.GetReferencedComponentVersionRecursive(ctx, ocmGetter.RootComponentVersion(), "platform-service-"+ps.Name)
 		if err != nil {
 			return fmt.Errorf("failed to get component version for platform service %s: %w", ps, err)
 		}
@@ -207,9 +212,10 @@ func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, 
 		}
 
 		opts := &ProviderOptions{
-			Name:             ps,
+			Name:             ps.Name,
 			Image:            *imageResource.Access.ImageReference,
 			ImagePullSecrets: imagePullSecrets,
+			Config:           ps.ConfigParsed,
 		}
 
 		err = templateProvider(opts, platformServiceTemplate, platformServicesDir, repo)
@@ -238,6 +244,7 @@ func templateProvider(options *ProviderOptions, templateSource, dir string, repo
 	logger.Debugf("Creating provider %s with image %s in path %s", options.Name, options.Image, providerPath)
 
 	te := template.NewTemplateExecution()
+
 	templateInput := map[string]interface{}{
 		"values": map[string]interface{}{
 			"name": options.Name,
@@ -245,6 +252,7 @@ func templateProvider(options *ProviderOptions, templateSource, dir string, repo
 				"location":         options.Image,
 				"imagePullSecrets": options.ImagePullSecrets,
 			},
+			"config": options.Config,
 		},
 	}
 

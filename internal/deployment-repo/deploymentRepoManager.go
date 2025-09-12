@@ -312,7 +312,7 @@ func (m *DeploymentRepoManager) ApplyCustomResourceDefinitions(ctx context.Conte
 	}
 
 	for _, clusterProvider := range m.Config.Providers.ClusterProviders {
-		clusterProviderCV, err := m.compGetter.GetReferencedComponentVersionRecursive(ctx, m.compGetter.RootComponentVersion(), "cluster-provider-"+clusterProvider)
+		clusterProviderCV, err := m.compGetter.GetReferencedComponentVersionRecursive(ctx, m.compGetter.RootComponentVersion(), "cluster-provider-"+clusterProvider.Name)
 		if err != nil {
 			return fmt.Errorf("failed to get component version for cluster provider %s: %w", clusterProvider, err)
 		}
@@ -324,7 +324,7 @@ func (m *DeploymentRepoManager) ApplyCustomResourceDefinitions(ctx context.Conte
 	}
 
 	for _, serviceProvider := range m.Config.Providers.ServiceProviders {
-		serviceProviderCV, err := m.compGetter.GetReferencedComponentVersionRecursive(ctx, m.compGetter.RootComponentVersion(), "service-provider-"+serviceProvider)
+		serviceProviderCV, err := m.compGetter.GetReferencedComponentVersionRecursive(ctx, m.compGetter.RootComponentVersion(), "service-provider-"+serviceProvider.Name)
 		if err != nil {
 			return fmt.Errorf("failed to get component version for service provider %s: %w", serviceProvider, err)
 		}
@@ -335,7 +335,7 @@ func (m *DeploymentRepoManager) ApplyCustomResourceDefinitions(ctx context.Conte
 	}
 
 	for _, platformService := range m.Config.Providers.PlatformServices {
-		platformServiceCV, err := m.compGetter.GetReferencedComponentVersionRecursive(ctx, m.compGetter.RootComponentVersion(), "platform-service-"+platformService)
+		platformServiceCV, err := m.compGetter.GetReferencedComponentVersionRecursive(ctx, m.compGetter.RootComponentVersion(), "platform-service-"+platformService.Name)
 		if err != nil {
 			return fmt.Errorf("failed to get component version for platform service %s: %w", platformService, err)
 		}
@@ -496,15 +496,15 @@ func (m *DeploymentRepoManager) UpdateResourcesKustomization() error {
 	}
 
 	for _, clusterProvider := range m.Config.Providers.ClusterProviders {
-		files = append(files, filepath.Join("cluster-providers", clusterProvider+".yaml"))
+		files = append(files, filepath.Join("cluster-providers", clusterProvider.Name+".yaml"))
 	}
 
 	for _, serviceProvider := range m.Config.Providers.ServiceProviders {
-		files = append(files, filepath.Join("service-providers", serviceProvider+".yaml"))
+		files = append(files, filepath.Join("service-providers", serviceProvider.Name+".yaml"))
 	}
 
 	for _, platformService := range m.Config.Providers.PlatformServices {
-		files = append(files, filepath.Join("platform-services", platformService+".yaml"))
+		files = append(files, filepath.Join("platform-services", platformService.Name+".yaml"))
 	}
 
 	for _, manifest := range m.extraManifests {
