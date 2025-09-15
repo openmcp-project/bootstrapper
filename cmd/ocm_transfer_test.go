@@ -44,7 +44,7 @@ func TestOcmTransfer(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
 			root := cmd.RootCmd
-			args := []string{"ocmTransfer"}
+			args := []string{"ocm-transfer"}
 			if len(tc.arguments) > 0 {
 				args = append(args, tc.arguments...)
 			}

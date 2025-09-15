@@ -17,9 +17,6 @@ import (
 )
 
 const (
-	FlagGitConfig        = "git-config"
-	FlagOcmConfig        = "ocm-config"
-	FlagKubeConfig       = "kubeconfig"
 	FlagExtraManifestDir = "extra-manifest-dir"
 )
 
@@ -33,16 +30,16 @@ func (w LogWriter) Write(p []byte) (n int, err error) {
 
 // manageDeploymentRepoCmd represents the manageDeploymentRepo command
 var manageDeploymentRepoCmd = &cobra.Command{
-	Use:   "manageDeploymentRepo",
+	Use:   "manage-deployment-repo",
 	Short: "Updates the openMCP deployment specification in the specified Git repository",
 	Long: `Updates the openMCP deployment specification in the specified Git repository.
 The update is based on the specified component version.
-openmcp-bootstrapper manageDeploymentRepo <configFile>`,
+openmcp-bootstrapper manage-deployment-repo <configFile>`,
 	Args: cobra.ExactArgs(1),
 	ArgAliases: []string{
 		"configFile",
 	},
-	Example: `  openmcp-bootstrapper manageDeploymentRepo "./config.yaml"`,
+	Example: `  openmcp-bootstrapper manage-deployment-repo "./config.yaml"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		configFilePath := args[0]
 
