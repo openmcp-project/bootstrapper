@@ -1,0 +1,9 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: environments
+  namespace: flux-system
+spec:
+  ref:
+    branch: {{ .Values.gitRepoEnvBranch }}

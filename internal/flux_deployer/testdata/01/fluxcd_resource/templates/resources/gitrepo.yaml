@@ -1,0 +1,13 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: environments
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: {{ .Values.git.repoUrl }}
+  ref:
+    branch: {{ .Values.git.mainBranch }}
+  secretRef:
+    name: git

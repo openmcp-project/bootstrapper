@@ -30,6 +30,9 @@ const (
 	FluxCDSourceControllerResourceName        = "fluxcd-source-controller"
 	FluxCDKustomizationControllerResourceName = "fluxcd-kustomize-controller"
 	FluxCDHelmControllerResourceName          = "fluxcd-helm-controller"
+	FluxCDNotificationControllerName          = "fluxcd-notification-controller"
+	FluxCDImageReflectorControllerName        = "fluxcd-image-reflector-controller"
+	FluxCDImageAutomationControllerName       = "fluxcd-image-automation-controller"
 
 	EnvsDirectoryName       = "envs"
 	ResourcesDirectoryName  = "resources"
@@ -249,6 +252,21 @@ func (m *DeploymentRepoManager) ApplyTemplates(ctx context.Context) error {
 	err = applyFluxCDTemplateInput(templateInput, m.fluxcdCV, FluxCDHelmControllerResourceName, "helmController")
 	if err != nil {
 		return fmt.Errorf("failed to apply fluxcd helm controller template input: %w", err)
+	}
+
+	err = applyFluxCDTemplateInput(templateInput, m.fluxcdCV, FluxCDNotificationControllerName, "notificationController")
+	if err != nil {
+		return fmt.Errorf("failed to apply fluxcd helm controller template input: %w", err)
+	}
+
+	err = applyFluxCDTemplateInput(templateInput, m.fluxcdCV, FluxCDImageReflectorControllerName, "imageReflectorController")
+	if err != nil {
+		return fmt.Errorf("failed to apply fluxcd image reflector controller template input: %w", err)
+	}
+
+	err = applyFluxCDTemplateInput(templateInput, m.fluxcdCV, FluxCDImageAutomationControllerName, "imageAutomationController")
+	if err != nil {
+		return fmt.Errorf("failed to apply fluxcd image automation controller template input: %w", err)
 	}
 
 	err = TemplateDir(m.templatesDir, templateInput, m.gitRepo)

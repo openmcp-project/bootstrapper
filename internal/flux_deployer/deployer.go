@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/openmcp-project/controller-utils/pkg/clusters"
@@ -15,7 +14,6 @@ import (
 
 	cfg "github.com/openmcp-project/bootstrapper/internal/config"
 	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
-	"github.com/openmcp-project/bootstrapper/internal/template"
 	"github.com/openmcp-project/bootstrapper/internal/util"
 )
 
@@ -51,6 +49,15 @@ func NewFluxDeployer(config *cfg.BootstrapperConfig, gitConfigPath, ocmConfigPat
 }
 
 func (d *FluxDeployer) Deploy(ctx context.Context) (err error) {
+	componentManager, err := NewComponentManager(ctx, d.Config, d.OcmConfigPath)
+	if err != nil {
+		return fmt.Errorf("error creating component manager: %w", err)
+	}
+
+	return d.DeployWithComponentManager(ctx, componentManager)
+}
+
+func (d *FluxDeployer) DeployWithComponentManager(ctx context.Context, componentManager ComponentManager) (err error) {
 	d.log.Infof("Ensure namespace %s exists", d.fluxNamespace)
 	namespaceMutator := resources.NewNamespaceMutator(d.fluxNamespace)
 	if err := resources.CreateOrUpdateResource(ctx, d.platformCluster.Client(), namespaceMutator); err != nil {
@@ -99,24 +106,15 @@ func (d *FluxDeployer) Deploy(ctx context.Context) (err error) {
 	}
 	d.log.Tracef("Created repo directory: %s", d.repoDir)
 
-	// Get components
-	// - root component
-	// - gitops-templates component
-	// - that contains the image resources for fluxcd source controller component
-	d.log.Info("Loading root component and gitops-templates component")
-	componentGetter := ocmcli.NewComponentGetter(d.Config.Component.OpenMCPComponentLocation, d.Config.Component.FluxcdTemplateResourcePath, d.OcmConfigPath)
-	if err := componentGetter.InitializeComponents(ctx); err != nil {
-		return err
-	}
-
-	d.fluxcdCV, err = componentGetter.GetComponentVersionForResourceRecursive(ctx, componentGetter.RootComponentVersion(), FluxCDSourceControllerResourceName)
+	// Get component which contains the fluxcd images as resources
+	d.fluxcdCV, err = componentManager.GetComponentWithImageResources(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get fluxcd source controller component version: %w", err)
 	}
 
 	// Download resource from gitops-templates component into the download directory
-	d.log.Info("Downloading gitops-templates")
-	if err := componentGetter.DownloadTemplatesResource(ctx, d.downloadDir); err != nil {
+	d.log.Info("Downloading templates")
+	if err := componentManager.DownloadTemplatesResource(ctx, d.downloadDir); err != nil {
 		return fmt.Errorf("error downloading templates: %w", err)
 	}
 
@@ -197,8 +195,17 @@ func (d *FluxDeployer) Template() (err error) {
 	if err = templateInput.AddImageResource(d.fluxcdCV, FluxCDHelmControllerResourceName, "helmController"); err != nil {
 		return fmt.Errorf("failed to apply fluxcd helm controller template input: %w", err)
 	}
+	if err = templateInput.AddImageResource(d.fluxcdCV, FluxCDNotificationControllerName, "notificationController"); err != nil {
+		return fmt.Errorf("failed to apply fluxcd notification controller template input: %w", err)
+	}
+	if err = templateInput.AddImageResource(d.fluxcdCV, FluxCDImageReflectorControllerName, "imageReflectorController"); err != nil {
+		return fmt.Errorf("failed to apply fluxcd image reflector controller template input: %w", err)
+	}
+	if err = templateInput.AddImageResource(d.fluxcdCV, FluxCDImageAutomationControllerName, "imageAutomationController"); err != nil {
+		return fmt.Errorf("failed to apply fluxcd image automation controller template input: %w", err)
+	}
 
-	if err = TemplateDirectory(d.templatesDir, templateInput, d.repoDir, d.log); err != nil {
+	if err = TemplateDirectory(d.templatesDir, d.repoDir, templateInput, d.log); err != nil {
 		return fmt.Errorf("failed to apply templates from directory %s: %w", d.templatesDir, err)
 	}
 
@@ -223,57 +230,4 @@ func (d *FluxDeployer) Kustomize(dir string) ([]byte, error) {
 	}
 
 	return resourcesYaml, nil
-}
-
-func (d *FluxDeployer) DeployFluxControllers(ctx context.Context, rootComponentVersion *ocmcli.ComponentVersion, downloadDir string) error {
-	d.log.Info("Deploying flux")
-
-	images, err := GetFluxCDImages(rootComponentVersion)
-	if err != nil {
-		return fmt.Errorf("error getting images for flux controllers: %w", err)
-	}
-
-	// Read manifest file
-	filepath := path.Join(downloadDir, "resources", "gotk-components.yaml")
-	d.log.Debugf("Reading flux deployment objects from file %s", filepath)
-	manifestTpl, err := d.readFileContent(filepath)
-	if err != nil {
-		return fmt.Errorf("error reading flux deployment objects from file %s: %w", filepath, err)
-	}
-
-	// Template
-	values := map[string]any{
-		"Values": map[string]any{
-			"namespace": d.fluxNamespace,
-			"images":    images,
-		},
-	}
-	d.log.Debug("Templating flux deployment objects")
-	manifest, err := template.NewTemplateExecution().Execute("flux-deployment", string(manifestTpl), values)
-	if err != nil {
-		return fmt.Errorf("error templating flux deployment objects: %w", err)
-	}
-
-	// Apply
-	d.log.Debug("Applying flux deployment objects")
-	if err := util.ApplyManifests(ctx, d.platformCluster, manifest); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (d *FluxDeployer) readFileContent(filepath string) ([]byte, error) {
-	d.log.Debugf("Reading file: %s", filepath)
-
-	if _, err := os.Stat(filepath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("file does not exist at path: %s", filepath)
-	}
-
-	content, err := os.ReadFile(filepath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading file %s: %w", filepath, err)
-	}
-
-	return content, nil
 }

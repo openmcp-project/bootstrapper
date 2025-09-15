@@ -14,18 +14,19 @@ import (
 )
 
 const (
-	username   = "username"
-	password   = "password"
-	token      = "token"
-	identity   = "identity"
-	knownHosts = "known_hosts"
+	Username   = "username"
+	Password   = "password"
+	Token      = "token"
+	Identity   = "identity"
+	KnownHosts = "known_hosts"
 )
 
 // CreateGitCredentialsSecret creates or updates a Secret with name "git" in the fluxcd namespace.
-// The secret contains git credentials for flux sync, read from the file d.gitCredentials.
+// The secret contains git credentials for the flux sync, read from the file gitCredentialsPath.
 // The file should contain a YAML of a map[string]string, whose keys are described
 // in https://fluxcd.io/flux/components/source/gitrepositories/#secret-reference, e.g. username and password.
-func CreateGitCredentialsSecret(ctx context.Context, log *logrus.Logger, gitCredentialsPath string, secretName, secretNamespace string, platformClient client.Client) error {
+func CreateGitCredentialsSecret(ctx context.Context, log *logrus.Logger, gitCredentialsPath, secretName, secretNamespace string, platformClient client.Client) error {
+
 	log.Infof("Creating/updating git credentials secret %s/%s", secretNamespace, secretName)
 
 	gitCredentialsData := map[string][]byte{}
@@ -44,12 +45,12 @@ func CreateGitCredentialsSecret(ctx context.Context, log *logrus.Logger, gitCred
 
 		if config.Authentication.BasicAuth != nil {
 			log.Debug("Using basic auth credentials for git operations")
-			gitCredentialsData[username] = []byte(config.Authentication.BasicAuth.Username)
-			gitCredentialsData[password] = []byte(config.Authentication.BasicAuth.Password)
+			gitCredentialsData[Username] = []byte(config.Authentication.BasicAuth.Username)
+			gitCredentialsData[Password] = []byte(config.Authentication.BasicAuth.Password)
 		}
 		if config.Authentication.BearerToken != nil {
 			log.Debug("Using bearer token for git operations")
-			gitCredentialsData[token] = []byte(config.Authentication.BearerToken.Token)
+			gitCredentialsData[Token] = []byte(config.Authentication.BearerToken.Token)
 		}
 		if config.Authentication.SSHPrivateKey != nil {
 			log.Debug("Using ssh private key for git operations")
@@ -58,7 +59,7 @@ func CreateGitCredentialsSecret(ctx context.Context, log *logrus.Logger, gitCred
 				return err
 			}
 
-			gitCredentialsData[identity] = privateKey
+			gitCredentialsData[Identity] = privateKey
 
 			if config.Authentication.SSHPrivateKey.KnownHosts != "" {
 				knownHostsPath := config.Authentication.SSHPrivateKey.KnownHosts
@@ -69,7 +70,7 @@ func CreateGitCredentialsSecret(ctx context.Context, log *logrus.Logger, gitCred
 				if err != nil {
 					return fmt.Errorf("error reading known hosts file %s: %w", knownHostsPath, err)
 				}
-				gitCredentialsData[knownHosts] = knownHostsContent
+				gitCredentialsData[KnownHosts] = knownHostsContent
 			}
 		}
 	}

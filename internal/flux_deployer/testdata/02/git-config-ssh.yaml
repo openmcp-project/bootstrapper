@@ -1,0 +1,4 @@
+auth:
+  sshPrivateKey:
+    privateKey: dGVzdC1rZXk=
+    knownHosts: ./testdata/02/known_hosts

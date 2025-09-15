@@ -10,10 +10,6 @@ import (
 
 type TemplateInput map[string]any
 
-func NewTemplateInput() TemplateInput {
-	return make(TemplateInput)
-}
-
 func NewTemplateInputFromConfig(c *config.BootstrapperConfig) TemplateInput {
 	t := TemplateInput{
 		"fluxCDEnvPath":        "./" + EnvsDirectoryName + "/" + c.Environment + "/" + FluxCDDirectoryName,

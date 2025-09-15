@@ -1,0 +1,4 @@
+auth:
+  basic:
+    username: test-user
+    password: test-pass

@@ -1,4 +1,0 @@
-config:
-  vars:
-    - a: "a"
-    - b: "b"

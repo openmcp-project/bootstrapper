@@ -20,4 +20,7 @@ const (
 	FluxCDSourceControllerResourceName        = "fluxcd-source-controller"
 	FluxCDKustomizationControllerResourceName = "fluxcd-kustomize-controller"
 	FluxCDHelmControllerResourceName          = "fluxcd-helm-controller"
+	FluxCDNotificationControllerName          = "fluxcd-notification-controller"
+	FluxCDImageReflectorControllerName        = "fluxcd-image-reflector-controller"
+	FluxCDImageAutomationControllerName       = "fluxcd-image-automation-controller"
 )
