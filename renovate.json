@@ -3,7 +3,10 @@
   "git-submodules": {
     "enabled": true
   },
-  "minimumReleaseAge": "3 days",
+  "minimumReleaseAge": "0 days",
+  "ignorePaths": [
+    "**/internal/deployment-repo/testdata/**"
+  ],
   "extends": [
     "config:recommended",
     "config:best-practices",
