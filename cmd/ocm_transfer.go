@@ -9,7 +9,7 @@ import (
 
 // ocmTransferCmd represents the "ocm transfer componentversion" command
 var ocmTransferCmd = &cobra.Command{
-	Use:   "ocmTransfer source target",
+	Use:   "ocm-transfer source target",
 	Short: "Transfer an OCM component from a source to a target location",
 	Long:  `Transfers the specified OCM component version from the source location to the target location.`,
 	Aliases: []string{
@@ -23,7 +23,7 @@ var ocmTransferCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		log := log.GetLogger()
 
-		log.Debugf("Executing ocmTransfer with source: %s, target: %s", args[0], args[1])
+		log.Debugf("Executing ocm-transfer with source: %s, target: %s", args[0], args[1])
 
 		transferCommands := []string{
 			"transfer",
@@ -38,12 +38,12 @@ var ocmTransferCmd = &cobra.Command{
 			args[1], // target
 		}
 
-		return ocmcli.Execute(cmd.Context(), transferCommands, transferArgs, cmd.Flag("config").Value.String())
+		return ocmcli.Execute(cmd.Context(), transferCommands, transferArgs, cmd.Flag(FlagOcmConfig).Value.String())
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(ocmTransferCmd)
 
-	ocmTransferCmd.PersistentFlags().StringP("config", "c", "", "ocm configuration file")
+	ocmTransferCmd.PersistentFlags().String(FlagOcmConfig, "", "ocm configuration file")
 }

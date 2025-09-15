@@ -22,6 +22,7 @@ var deployFluxCmd = &cobra.Command{
 	ArgAliases: []string{
 		"configFile",
 	},
+	Example: `  openmcp-bootstrapper deploy-flux "./config.yaml"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		configFilePath := args[0]
 
