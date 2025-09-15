@@ -5,7 +5,7 @@ resources:
 images:
   - name: <openmcp/openmcp-operator>
     newName: ghcr.io/openmcp-project/images/openmcp-operator
-    newTag: v0.2.1
+    newTag: v0.14.0@sha256:a3399f7ebe3533b29850dd0d8570725beb88ad1589b4f108866aec55c610af5e
 secretGenerator:
   - name: openmcp-operator-config
     namespace: openmcp-system
