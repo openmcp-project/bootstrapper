@@ -121,38 +121,15 @@ func TestDeploymentRepoManager(t *testing.T) {
 
 	testutils.AssertDirectoriesEqualWithNormalization(t, expectedRepoDir, actualRepoDir, createGitRepoNormalizer(originDir))
 
-	clusterProviderTest := &unstructured.Unstructured{}
-	clusterProviderTest.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "openmcp.cloud",
-		Version: "v1alpha1",
-		Kind:    "ClusterProvider",
+	fluxKustomization := &unstructured.Unstructured{}
+	fluxKustomization.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "kustomize.toolkit.fluxcd.io",
+		Version: "v1",
+		Kind:    "Kustomization",
 	})
 
-	err = platformClient.Get(t.Context(), client.ObjectKey{Name: "test"}, clusterProviderTest)
+	err = platformClient.Get(t.Context(), client.ObjectKey{Name: "bootstrap", Namespace: "default"}, fluxKustomization)
 	assert.NoError(t, err)
-	assert.Equal(t, "test", clusterProviderTest.GetName())
-
-	serviceProviderTest := &unstructured.Unstructured{}
-	serviceProviderTest.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "openmcp.cloud",
-		Version: "v1alpha1",
-		Kind:    "ServiceProvider",
-	})
-
-	err = platformClient.Get(t.Context(), client.ObjectKey{Name: "test"}, serviceProviderTest)
-	assert.NoError(t, err)
-	assert.Equal(t, "test", serviceProviderTest.GetName())
-
-	platformServiceTest := &unstructured.Unstructured{}
-	platformServiceTest.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "openmcp.cloud",
-		Version: "v1alpha1",
-		Kind:    "PlatformService",
-	})
-
-	err = platformClient.Get(t.Context(), client.ObjectKey{Name: "test"}, platformServiceTest)
-	assert.NoError(t, err)
-	assert.Equal(t, "test", platformServiceTest.GetName())
 }
 
 // CreateGitRepoNormalizer creates a normalizer function that replaces dynamic git repository URLs
