@@ -58,17 +58,16 @@ func createCluster(kubeconfigPath, id string, scheme *runtime.Scheme) (*clusters
 }
 
 func ApplyManifests(ctx context.Context, cluster *clusters.Cluster, manifests []byte) error {
-
 	// Parse manifests into unstructured objects
 	reader := bytes.NewReader(manifests)
-	unstructuredObjects, err := parseManifests(reader)
+	unstructuredObjects, err := ParseManifests(reader)
 	if err != nil {
 		return fmt.Errorf("error parsing manifests: %w", err)
 	}
 
 	// Apply objects to the platform cluster
 	for _, u := range unstructuredObjects {
-		if err = applyUnstructuredObject(ctx, cluster, u); err != nil {
+		if err = ApplyUnstructuredObject(ctx, cluster, u); err != nil {
 			return err
 		}
 	}
@@ -76,7 +75,7 @@ func ApplyManifests(ctx context.Context, cluster *clusters.Cluster, manifests []
 	return nil
 }
 
-func parseManifests(reader io.Reader) ([]*unstructured.Unstructured, error) {
+func ParseManifests(reader io.Reader) ([]*unstructured.Unstructured, error) {
 	decoder := yaml.NewYAMLOrJSONDecoder(reader, 4096)
 	var result []*unstructured.Unstructured
 	for {
@@ -96,7 +95,7 @@ func parseManifests(reader io.Reader) ([]*unstructured.Unstructured, error) {
 	return result, nil
 }
 
-func applyUnstructuredObject(ctx context.Context, cluster *clusters.Cluster, u *unstructured.Unstructured) error {
+func ApplyUnstructuredObject(ctx context.Context, cluster *clusters.Cluster, u *unstructured.Unstructured) error {
 	logger := log.GetLogger()
 	objectKey := client.ObjectKeyFromObject(u)
 	objectLogString := fmt.Sprintf("%s %s", u.GetObjectKind().GroupVersionKind().String(), objectKey.String())

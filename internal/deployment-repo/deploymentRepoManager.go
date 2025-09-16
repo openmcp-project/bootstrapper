@@ -1,6 +1,7 @@
 package deploymentrepo
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -592,11 +593,22 @@ func (m *DeploymentRepoManager) RunKustomizeAndApply(ctx context.Context) error 
 		return fmt.Errorf("failed to convert kustomized resources to YAML: %w", err)
 	}
 
-	logger.Infof("Applying kustomized resources to target cluster")
-	err = util.ApplyManifests(ctx, m.TargetCluster, resourcesYAML)
+	reader := bytes.NewReader(resourcesYAML)
+	manifests, err := util.ParseManifests(reader)
 	if err != nil {
-		return fmt.Errorf("failed to apply kustomized resources to cluster: %w", err)
+		return fmt.Errorf("failed to parse kustomized resources: %w", err)
 	}
+
+	for _, manifest := range manifests {
+		if manifest.GetKind() == "Kustomization" && strings.Contains(manifest.GetAPIVersion(), "kustomize.toolkit.fluxcd.io") {
+			logger.Infof("Applying Kustomization manifest: %s/%s", manifest.GetNamespace(), manifest.GetName())
+			err = util.ApplyUnstructuredObject(ctx, m.TargetCluster, manifest)
+			if err != nil {
+				return fmt.Errorf("failed to apply Kustomization manifest %s/%s: %w", manifest.GetNamespace(), manifest.GetName(), err)
+			}
+		}
+	}
+
 	return nil
 }
 
