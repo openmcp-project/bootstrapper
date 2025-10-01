@@ -177,6 +177,9 @@ func (t *TemplateTransformer) Transform(ctx context.Context, envName, targetDir 
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "bootstrap",
 			Namespace: "default",
+			Annotations: map[string]string{
+				"kustomize.toolkit.fluxcd.io/prune": "disabled",
+			},
 		},
 		Spec: fluxk.KustomizationSpec{
 			Interval: metav1.Duration{Duration: 10 * time.Minute},
