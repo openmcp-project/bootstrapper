@@ -1,6 +1,8 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
   name: flux-system
   namespace: flux-system
 spec:
