@@ -8,7 +8,6 @@ import (
 	"time"
 
 	fluxk "github.com/fluxcd/kustomize-controller/api/v1"
-	fluxm "github.com/fluxcd/pkg/apis/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ktypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/yaml"
@@ -190,7 +189,7 @@ func (t *TemplateTransformer) Transform(ctx context.Context, envName, targetDir 
 				Name:      "environments",
 				Namespace: "flux-system",
 			},
-			DependsOn: []fluxm.NamespacedObjectReference{
+			DependsOn: []fluxk.DependencyReference{
 				{
 					Name:      "flux-system",
 					Namespace: "flux-system",
