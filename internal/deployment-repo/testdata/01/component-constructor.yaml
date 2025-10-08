@@ -25,6 +25,10 @@ components:
         name: gitops-templates
         version: v0.1.1
 
+      - componentName: github.com/openmcp-project/openmcp/releasechannel
+        name: releasechannel
+        version: v2.1.3
+
     resources:
       - name: fluxcd-source-controller
         version: v1.6.2
@@ -153,3 +157,43 @@ components:
         input:
           type: dir
           path: ./templates/openmcp
+
+  - name: github.com/openmcp-project/openmcp/releasechannel
+    version: v2.1.3
+    provider:
+      name: openmcp-project
+
+    componentReferences:
+      - componentName: github.com/openmcp-project/openmcp/releasechannel/crossplane
+        name: crossplane
+        version: v0.0.1
+
+      - componentName: github.com/openmcp-project/openmcp/releasechannel/crossplane
+        name: crossplane
+        version: v0.0.2
+
+  - name: github.com/openmcp-project/openmcp/releasechannel/crossplane
+    version: v0.0.1
+    provider:
+      name: openmcp-project
+
+    resources:
+      - name: image-crossplane
+        type: ociImage
+        version: v0.0.2
+        access:
+          type: ociArtifact
+          imageReference: ghcr.io/openmcp-project/releasechannel/crossplane:v0.0.2
+
+  - name: github.com/openmcp-project/openmcp/releasechannel/crossplane
+    version: v0.0.2
+    provider:
+      name: openmcp-project
+
+    resources:
+      - name: image-crossplane
+        type: ociImage
+        version: v0.0.2
+        access:
+          type: ociArtifact
+          imageReference: ghcr.io/openmcp-project/releasechannel/crossplane:v0.0.2

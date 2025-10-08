@@ -270,7 +270,12 @@ func (m *DeploymentRepoManager) ApplyTemplates(ctx context.Context) error {
 		return fmt.Errorf("failed to apply fluxcd image automation controller template input: %w", err)
 	}
 
-	err = TemplateDir(m.templatesDir, templateInput, m.gitRepo)
+	err = util.CopyDir(m.ExtraManifestDir, filepath.Join(m.templatesDir, ResourcesDirectoryName, OpenMCPDirectoryName, ExtraManifestsDirectory))
+	if err != nil {
+		return fmt.Errorf("failed to copy extra manifests from %s to deployment repository: %w", m.ExtraManifestDir, err)
+	}
+
+	err = TemplateDir(ctx, m.templatesDir, templateInput, m.compGetter, m.gitRepo)
 	if err != nil {
 		return fmt.Errorf("failed to apply templates from directory %s: %w", m.templatesDir, err)
 	}
@@ -466,18 +471,6 @@ func (m *DeploymentRepoManager) ApplyExtraManifests(_ context.Context) error {
 
 	// if an extra manifest directory is specified, copy its contents to the deployment repository
 	logger.Infof("Applying extra manifests from %s to deployment repository", m.ExtraManifestDir)
-	err := util.CopyDir(m.ExtraManifestDir, filepath.Join(m.gitRepoDir, ResourcesDirectoryName, OpenMCPDirectoryName, ExtraManifestsDirectory))
-	if err != nil {
-		return fmt.Errorf("failed to copy extra manifests from %s to deployment repository: %w", m.ExtraManifestDir, err)
-	}
-	workTree, err := m.gitRepo.Worktree()
-	if err != nil {
-		return fmt.Errorf("failed to get worktree: %w", err)
-	}
-	_, err = workTree.Add(filepath.Join(ResourcesDirectoryName, OpenMCPDirectoryName, ExtraManifestsDirectory))
-	if err != nil {
-		return fmt.Errorf("failed to add extra manifests to git index: %w", err)
-	}
 
 	entries, err := os.ReadDir(m.ExtraManifestDir)
 	if err != nil {
@@ -499,6 +492,7 @@ func (m *DeploymentRepoManager) ApplyExtraManifests(_ context.Context) error {
 	return nil
 }
 
+// UpdateResourcesKustomization updates the resources kustomization file in the deployment repository to include all applied resources.
 func (m *DeploymentRepoManager) UpdateResourcesKustomization() error {
 	logger := log.GetLogger()
 	files := make([]string, 0,

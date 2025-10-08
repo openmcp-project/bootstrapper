@@ -5,3 +5,16 @@ metadata:
     namespace: default
 data:
     key: "value"
+    repository: "{{ getOCMRepository }}"
+    {{- $releaseChannelCv := getComponentVersionByReference "releasechannel"  }}
+    {{- $crossplaneCv := getComponentVersionByReference $releaseChannelCv "crossplane"  }}
+    {{- $crossplaneImageResource := getResourceFromComponentVersion $crossplaneCv "image-crossplane" }}
+    {{- $imageReference := dig "access" "imageReference" "none" $crossplaneImageResource }}
+    {{- $parsedImage := parseImage $imageReference }}
+    {{- $crossplaneCvMap := componentVersionAsMap $crossplaneCv }}
+    crossplaneComponentName: "{{ dig "component" "name" "none" $crossplaneCvMap }}"
+    crossplaneComponentVersion: "{{ dig "component" "version" "none" $crossplaneCvMap }}"
+    crossplaneImage: "{{ dig "image" "none" $parsedImage }}"
+    crossplaneVersions: |
+    {{- $crossplaneVersions := listComponentVersions $crossplaneCv }}
+{{ toYaml (sortAlpha $crossplaneVersions) | indent 6 }}

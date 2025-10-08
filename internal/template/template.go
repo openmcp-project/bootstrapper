@@ -2,15 +2,17 @@ package template
 
 import (
 	"bytes"
+	"context"
 	"strings"
 	gotmpl "text/template"
 
 	"github.com/Masterminds/sprig/v3"
 	"sigs.k8s.io/yaml"
+
+	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
+	"github.com/openmcp-project/bootstrapper/internal/util"
 )
 
-// toYAML takes an interface, marshals it to yaml, and returns a string. It will
-// always return a string, even on marshal error (empty string).
 func toYAML(v interface{}) string {
 	data, err := yaml.Marshal(v)
 	if err != nil {
@@ -20,11 +22,112 @@ func toYAML(v interface{}) string {
 	return strings.TrimSuffix(string(data), "\n")
 }
 
-// fromYAML takes a string, unmarshals it from yaml, and returns an interface.
 func fromYAML(input string) (any, error) {
 	var output any
 	err := yaml.Unmarshal([]byte(input), &output)
 	return output, err
+}
+
+func getComponentVersionByReference(ctx context.Context, compGetter *ocmcli.ComponentGetter, args ...interface{}) *ocmcli.ComponentVersion {
+	if compGetter == nil {
+		panic("ComponentGetter must not be nil")
+	}
+
+	if len(args) < 1 {
+		panic("at least 1 argument is expected")
+	}
+
+	var err error
+	parentCv := compGetter.RootComponentVersion()
+	referenceName := args[len(args)-1].(string)
+
+	if len(args) == 2 {
+		parentCv = args[0].(*ocmcli.ComponentVersion)
+	}
+
+	cv, err := compGetter.GetReferencedComponentVersionRecursive(ctx, parentCv, referenceName)
+	if err != nil || cv == nil {
+		return nil
+	}
+
+	return cv
+}
+
+func componentVersionAsMap(cv *ocmcli.ComponentVersion) map[string]interface{} {
+	if cv == nil {
+		return nil
+	}
+
+	m, err := yaml.Marshal(cv)
+	if err != nil {
+		return nil
+	}
+
+	var output map[string]interface{}
+	err = yaml.Unmarshal(m, &output)
+	if err != nil {
+		return nil
+	}
+
+	return output
+}
+
+func getResourceFromComponentVersion(compGetter *ocmcli.ComponentGetter, cv *ocmcli.ComponentVersion, resourceName string) map[string]interface{} {
+	if compGetter == nil {
+		panic("ComponentGetter must not be nil")
+	}
+
+	res, err := cv.GetResource(resourceName)
+	if err != nil || res == nil {
+		return nil
+	}
+
+	m, err := yaml.Marshal(res)
+	if err != nil {
+		return nil
+	}
+
+	var output map[string]interface{}
+	err = yaml.Unmarshal(m, &output)
+	if err != nil {
+		return nil
+	}
+
+	return output
+}
+
+func getOCMRepository(compGetter *ocmcli.ComponentGetter) string {
+	if compGetter == nil {
+		panic("ComponentGetter must not be nil")
+	}
+
+	return compGetter.Repository()
+}
+
+func listComponentVersions(ctx context.Context, compGetter *ocmcli.ComponentGetter, cv *ocmcli.ComponentVersion) []string {
+	if compGetter == nil {
+		panic("ComponentGetter must not be nil")
+	}
+
+	versions, err := cv.ListComponentVersions(ctx, compGetter.OCMConfig())
+	if err != nil {
+		return nil
+	}
+
+	return versions
+}
+
+func parseImageReference(imageRef string) map[string]interface{} {
+	imageName, tag, digest, err := util.ParseImageVersionAndTag(imageRef)
+	if err != nil {
+		return nil
+	}
+
+	return map[string]interface{}{
+		"image":  imageName,
+		"tag":    tag,
+		"digest": digest,
+	}
 }
 
 // TemplateExecution is a struct that provides methods to execute templates with input data.
@@ -44,8 +147,16 @@ func NewTemplateExecution() *TemplateExecution {
 
 	t.funcMaps = append(t.funcMaps, sprig.FuncMap())
 	t.funcMaps = append(t.funcMaps, gotmpl.FuncMap{
-		"toYaml":   toYAML,
+		// toYaml takes an interface, marshals it to yaml, and returns a string. It will
+		// always return a string, even on marshal error (empty string).
+		"toYaml": toYAML,
+		// fromYaml takes a string, unmarshals it from yaml, and returns an interface.
+		// It returns an error if the unmarshal fails.
 		"fromYaml": fromYAML,
+		// parseImage takes a container image string and returns a map with the keys "name", "tag", and "digest".
+		// If no tag is specified, it defaults to "latest". If a digest is present, it is returned as well.
+		// If no digest is present, the "digest" key will have an empty string as value.
+		"parseImage": parseImageReference,
 	})
 	return t
 }
@@ -71,6 +182,53 @@ func (t *TemplateExecution) WithFuncMap(funcMap gotmpl.FuncMap) *TemplateExecuti
 // The default option is "error".
 func (t *TemplateExecution) WithMissingKeyOption(option string) *TemplateExecution {
 	t.missingKeyOption = option
+	return t
+}
+
+func (t *TemplateExecution) WithOCMComponentGetter(ctx context.Context, compGetter *ocmcli.ComponentGetter) *TemplateExecution {
+	if compGetter != nil {
+		t.funcMaps = append(t.funcMaps, gotmpl.FuncMap{
+			// getOCMRepository returns the OCM repository URL from the ComponentGetter.
+			// If the ComponentGetter is nil, it panics.
+			"getOCMRepository": func() string {
+				return getOCMRepository(compGetter)
+			},
+			// getComponentVersionByReference returns a ComponentVersion based on the provided reference name.
+			// It can take either one or two arguments:
+			// - One argument: the reference name (string). The search starts from the root component version.
+			// - Two arguments: the first argument is a ComponentVersion to start the search from, and the second argument is the reference name (string).
+			// If the ComponentVersion is not found, it returns nil.
+			// If the ComponentGetter is nil, it panics.
+			// If the number of arguments is less than 1, it panics.
+			"getComponentVersionByReference": func(args ...interface{}) *ocmcli.ComponentVersion {
+				return getComponentVersionByReference(ctx, compGetter, args...)
+			},
+			// componentVersionAsMap converts a ComponentVersion to a map[string]interface{}.
+			// If the ComponentVersion is nil, it returns nil.
+			"componentVersionAsMap": func(cv *ocmcli.ComponentVersion) map[string]interface{} {
+				return componentVersionAsMap(cv)
+			},
+			// getResourceFromComponentVersion retrieves a resource from the given ComponentVersion by its name.
+			// It takes two arguments:
+			// - cv: the ComponentVersion from which to retrieve the resource.
+			// - resourceName: the name of the resource to retrieve (string).
+			// It returns the resource as a map[string]interface{} or nil if not found.
+			// If the ComponentGetter is nil, it panics.
+			// If the resource is not found or an error occurs, it returns nil.
+			"getResourceFromComponentVersion": func(cv *ocmcli.ComponentVersion, resourceName string) map[string]interface{} {
+				return getResourceFromComponentVersion(compGetter, cv, resourceName)
+			},
+			// listComponentVersions lists all available versions of the given ComponentVersion's component.
+			// It takes one argument:
+			// - cv: the ComponentVersion for which to list available versions.
+			// It returns a slice of version strings or nil if an error occurs.
+			// If the ComponentGetter is nil, it panics.
+			// If an error occurs while listing versions, it returns nil.
+			"listComponentVersions": func(cv *ocmcli.ComponentVersion) []string {
+				return listComponentVersions(ctx, compGetter, cv)
+			},
+		})
+	}
 	return t
 }
 
