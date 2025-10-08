@@ -33,7 +33,6 @@ var ocmTransferCmd = &cobra.Command{
 		transferArgs := []string{
 			"--recursive",
 			"--copy-resources",
-			"--copy-sources",
 			args[0], // source
 			args[1], // target
 		}

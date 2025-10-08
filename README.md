@@ -25,7 +25,7 @@ Optional parameters:
 * `--ocm-config`: Path to the OCM configuration file.
 
 ```shell
-openmcp-bootstrapper ocmTransfer <source-location> <target-location> --config <path-to-ocm-config>
+openmcp-bootstrapper ocm-transfer <source-location> <target-location> --config <path-to-ocm-config>
 ```
 
 This command internally calls the OCM cli with the following command and arguments:
