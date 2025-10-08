@@ -3,10 +3,12 @@ package ocm_cli
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
 
+	yaml2 "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/yaml"
 )
 
@@ -46,14 +48,38 @@ func Execute(ctx context.Context, commands []string, args []string, ocmConfig st
 		return fmt.Errorf("error waiting for ocm command to finish: %w", err)
 	}
 
-	// get exit code
-	if exitError, ok := cmd.ProcessState.Sys().(interface{ ExitStatus() int }); ok {
-		if exitCode := exitError.ExitStatus(); exitCode != 0 {
-			return fmt.Errorf("ocm command exited with code %d", exitCode)
-		}
+	if cmd.ProcessState.ExitCode() != 0 {
+		return fmt.Errorf("ocm command exited with code %d", cmd.ProcessState.ExitCode())
 	}
 
 	return nil
+}
+
+func ExecuteOutput(ctx context.Context, commands []string, args []string, ocmConfig string) ([]byte, error) {
+	var ocmArgs []string
+
+	if ocmConfig != NoOcmConfig {
+		ocmArgs = append(ocmArgs, "--config", ocmConfig)
+
+		if err := verifyOCMConfig(ocmConfig); err != nil {
+			return nil, fmt.Errorf("invalid OCM configuration: %w", err)
+		}
+	}
+
+	ocmArgs = append(ocmArgs, commands...)
+	ocmArgs = append(ocmArgs, args...)
+
+	cmd := exec.CommandContext(ctx, "ocm", ocmArgs...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("error executing ocm command: %w, %q", err, out)
+	}
+
+	if cmd.ProcessState.ExitCode() != 0 {
+		return nil, fmt.Errorf("ocm command exited with code %d: %q", cmd.ProcessState.ExitCode(), out)
+	}
+
+	return out, nil
 }
 
 // ComponentVersion represents a version of an OCM component.
@@ -109,6 +135,11 @@ type Access struct {
 	MediaType *string `json:"mediaType"`
 }
 
+type ComponentListEntry struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
 var (
 	OCIImageResourceType = "ociImage"
 )
@@ -143,24 +174,36 @@ func (cv *ComponentVersion) GetComponentReference(name string) (*ComponentRefere
 	return nil, fmt.Errorf("component reference %s not found in component version %s", name, cv.Component.Name)
 }
 
-// GetComponentVersion retrieves a component version by its reference using the OCM CLI.
-func GetComponentVersion(ctx context.Context, componentReference string, ocmConfig string) (*ComponentVersion, error) {
-	var ocmArgs []string
+func (cv *ComponentVersion) ListComponentVersions(ctx context.Context, ocmConfig string) ([]string, error) {
 
-	if ocmConfig != NoOcmConfig {
-		ocmArgs = append(ocmArgs, "--config", ocmConfig)
-
-		if err := verifyOCMConfig(ocmConfig); err != nil {
-			return nil, fmt.Errorf("invalid OCM configuration: %w", err)
-		}
+	out, err := ExecuteOutput(ctx, []string{"list", "componentversion", cv.Repository + "//" + cv.Component.Name}, []string{"--output", "yaml"}, NoOcmConfig)
+	if err != nil {
+		return nil, err
 	}
 
-	ocmArgs = append(ocmArgs, "get", "componentversion", "--output", "yaml", componentReference)
+	cvList := make([]string, 0)
+	decoder := yaml2.NewYAMLOrJSONDecoder(strings.NewReader(string(out)), 1024)
+	for {
+		var entry ComponentListEntry
+		err = decoder.Decode(&entry)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("error decoding component version list: %w", err)
+		}
+		cvList = append(cvList, entry.Version)
+	}
 
-	cmd := exec.CommandContext(ctx, "ocm", ocmArgs...)
-	out, err := cmd.CombinedOutput()
+	return cvList, nil
+
+}
+
+// GetComponentVersion retrieves a component version by its reference using the OCM CLI.
+func GetComponentVersion(ctx context.Context, componentReference string, ocmConfig string) (*ComponentVersion, error) {
+	out, err := ExecuteOutput(ctx, []string{"get", "componentversion", componentReference}, []string{"--output", "yaml"}, ocmConfig)
 	if err != nil {
-		return nil, fmt.Errorf("error executing ocm command: %w, %q", err, out)
+		return nil, err
 	}
 
 	var cv ComponentVersion

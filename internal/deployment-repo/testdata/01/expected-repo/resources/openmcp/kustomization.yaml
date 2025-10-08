@@ -23,3 +23,4 @@ resources:
 - cluster-providers/test.yaml
 - service-providers/test.yaml
 - platform-services/test.yaml
+- extra/test-configmap.yaml

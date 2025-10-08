@@ -20,7 +20,7 @@ import (
 // TemplateDir processes the template files in the specified directory and writes
 // the rendered content to the corresponding files in the Git repository's worktree.
 // It uses the provided template directory and Git repository to perform the operations.
-func TemplateDir(templateDirectory string, templateInput map[string]interface{}, repo *git.Repository) error {
+func TemplateDir(ctx context.Context, templateDirectory string, templateInput map[string]interface{}, compGetter *ocmcli.ComponentGetter, repo *git.Repository) error {
 	logger := log.GetLogger()
 
 	workTree, err := repo.Worktree()
@@ -38,7 +38,7 @@ func TemplateDir(templateDirectory string, templateInput map[string]interface{},
 		}
 	}()
 
-	te := template.NewTemplateExecution().WithMissingKeyOption("zero")
+	te := template.NewTemplateExecution().WithOCMComponentGetter(ctx, compGetter).WithMissingKeyOption("zero")
 
 	// Recursively walk through all files in the template directory
 	err = filepath.WalkDir(templateDirectory, func(path string, d os.DirEntry, walkError error) error {

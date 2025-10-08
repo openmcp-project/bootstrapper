@@ -103,6 +103,9 @@ func TestDeploymentRepoManager(t *testing.T) {
 	err = deploymentRepoManager.ApplyCustomResourceDefinitions(t.Context())
 	assert.NoError(t, err)
 
+	err = deploymentRepoManager.ApplyExtraManifests(t.Context())
+	assert.NoError(t, err)
+
 	err = deploymentRepoManager.UpdateResourcesKustomization()
 	assert.NoError(t, err)
 
@@ -119,7 +122,7 @@ func TestDeploymentRepoManager(t *testing.T) {
 	expectedRepoDir := "./testdata/01/expected-repo"
 	actualRepoDir := originDir
 
-	testutils.AssertDirectoriesEqualWithNormalization(t, expectedRepoDir, actualRepoDir, createGitRepoNormalizer(originDir))
+	testutils.AssertDirectoriesEqualWithNormalization(t, expectedRepoDir, actualRepoDir, createTestNormalizer(originDir, ctfIn))
 
 	fluxKustomization := &unstructured.Unstructured{}
 	fluxKustomization.SetGroupVersionKind(schema.GroupVersionKind{
@@ -132,12 +135,16 @@ func TestDeploymentRepoManager(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-// CreateGitRepoNormalizer creates a normalizer function that replaces dynamic git repository URLs
-func createGitRepoNormalizer(actualRepoURL string) func(string, string) string {
+// createTestNormalizer returns a function that normalizes file content by replacing actual repository URLs with placeholders.
+func createTestNormalizer(actualRepoURL, actualOCMRepoURL string) func(string, string) string {
 	return func(content, filePath string) string {
 		// For gitrepo.yaml files, replace the actual repo URL with a placeholder
 		if strings.Contains(filePath, "gitrepo.yaml") {
-			return strings.ReplaceAll(content, actualRepoURL, "{{GIT_REPO_URL}}")
+			content = strings.ReplaceAll(content, actualRepoURL, "{{GIT_REPO_URL}}")
+		}
+		// For files that may contain OCM repository URLs, replace the actual repo URL with a placeholder
+		if strings.Contains(filePath, ".yaml") || strings.Contains(filePath, ".yml") || strings.Contains(filePath, ".json") {
+			content = strings.ReplaceAll(content, actualOCMRepoURL, "{{OCM_REPO_URL}}")
 		}
 		return content
 	}
