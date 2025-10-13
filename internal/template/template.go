@@ -7,6 +7,7 @@ import (
 	gotmpl "text/template"
 
 	"github.com/Masterminds/sprig/v3"
+	"github.com/openmcp-project/bootstrapper/internal/log"
 	"sigs.k8s.io/yaml"
 
 	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
@@ -29,6 +30,8 @@ func fromYAML(input string) (any, error) {
 }
 
 func getComponentVersionByReference(ctx context.Context, compGetter *ocmcli.ComponentGetter, args ...interface{}) *ocmcli.ComponentVersion {
+	logger := log.GetLogger()
+
 	if compGetter == nil {
 		panic("ComponentGetter must not be nil")
 	}
@@ -45,8 +48,13 @@ func getComponentVersionByReference(ctx context.Context, compGetter *ocmcli.Comp
 		parentCv = args[0].(*ocmcli.ComponentVersion)
 	}
 
+	logger.Tracef("Template_Func: getComponentVersionByReference called with parent component version: %s and reference name: %s", parentCv.Component.Name, referenceName)
+
 	cv, err := compGetter.GetReferencedComponentVersionRecursive(ctx, parentCv, referenceName)
 	if err != nil || cv == nil {
+		if err != nil {
+			logger.Errorf("Template_Func: getComponentVersionByReference error getting component version by reference %s from parent component version %s: %v", referenceName, parentCv.Component.Name, err)
+		}
 		return nil
 	}
 
@@ -73,12 +81,18 @@ func componentVersionAsMap(cv *ocmcli.ComponentVersion) map[string]interface{} {
 }
 
 func getResourceFromComponentVersion(compGetter *ocmcli.ComponentGetter, cv *ocmcli.ComponentVersion, resourceName string) map[string]interface{} {
+	logger := log.GetLogger()
+	logger.Tracef("Template_Func: getResourceFromComponentVersion called with component version: %s and resource name: %s", cv.Component.Name, resourceName)
+
 	if compGetter == nil {
 		panic("ComponentGetter must not be nil")
 	}
 
 	res, err := cv.GetResource(resourceName)
 	if err != nil || res == nil {
+		if err != nil {
+			logger.Errorf("Template_Func: getResourceFromComponentVersion error getting resource %s from component version %s: %v", resourceName, cv.Component.Name, err)
+		}
 		return nil
 	}
 
@@ -105,12 +119,16 @@ func getOCMRepository(compGetter *ocmcli.ComponentGetter) string {
 }
 
 func listComponentVersions(ctx context.Context, compGetter *ocmcli.ComponentGetter, cv *ocmcli.ComponentVersion) []string {
+	logger := log.GetLogger()
+	logger.Tracef("Template_Func: listComponentVersions called with component version: %s", cv.Component.Name)
+
 	if compGetter == nil {
 		panic("ComponentGetter must not be nil")
 	}
 
 	versions, err := cv.ListComponentVersions(ctx, compGetter.OCMConfig())
 	if err != nil {
+		logger.Errorf("Template_Func: listComponentVersions error listing component versions for component %s: %v", cv.Component.Name, err)
 		return nil
 	}
 
