@@ -54,7 +54,7 @@ func (g *ComponentGetter) InitializeComponents(ctx context.Context) error {
 
 	cv := g.rootComponentVersion
 	for _, refName := range referenceNames {
-		cv, err = g.GetReferencedComponentVersion(ctx, cv, refName)
+		cv, err = g.GetReferencedComponentVersionRecursive(ctx, cv, refName)
 		if err != nil {
 			return fmt.Errorf("error getting referenced component version %s: %w", refName, err)
 		}
