@@ -162,7 +162,7 @@ func (g *ComponentGetter) DownloadDirectoryResourceByLocation(ctx context.Contex
 
 	cv := rootCV
 	for _, refName := range referenceNames {
-		cv, err = g.GetReferencedComponentVersion(ctx, cv, refName)
+		cv, err = g.GetReferencedComponentVersionRecursive(ctx, cv, refName)
 		if err != nil {
 			return fmt.Errorf("error getting referenced component version %s: %w", refName, err)
 		}
