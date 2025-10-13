@@ -270,9 +270,11 @@ func (m *DeploymentRepoManager) ApplyTemplates(ctx context.Context) error {
 		return fmt.Errorf("failed to apply fluxcd image automation controller template input: %w", err)
 	}
 
-	err = util.CopyDir(m.ExtraManifestDir, filepath.Join(m.templatesDir, ResourcesDirectoryName, OpenMCPDirectoryName, ExtraManifestsDirectory))
-	if err != nil {
-		return fmt.Errorf("failed to copy extra manifests from %s to deployment repository: %w", m.ExtraManifestDir, err)
+	if len(m.ExtraManifestDir) > 0 {
+		err = util.CopyDir(m.ExtraManifestDir, filepath.Join(m.templatesDir, ResourcesDirectoryName, OpenMCPDirectoryName, ExtraManifestsDirectory))
+		if err != nil {
+			return fmt.Errorf("failed to copy extra manifests from %s to deployment repository: %w", m.ExtraManifestDir, err)
+		}
 	}
 
 	err = TemplateDir(ctx, m.templatesDir, templateInput, m.compGetter, m.gitRepo)
