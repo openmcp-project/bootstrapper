@@ -7,8 +7,9 @@ import (
 	gotmpl "text/template"
 
 	"github.com/Masterminds/sprig/v3"
-	"github.com/openmcp-project/bootstrapper/internal/log"
 	"sigs.k8s.io/yaml"
+
+	"github.com/openmcp-project/bootstrapper/internal/log"
 
 	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
 	"github.com/openmcp-project/bootstrapper/internal/util"
