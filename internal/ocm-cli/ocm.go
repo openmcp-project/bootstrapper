@@ -176,7 +176,7 @@ func (cv *ComponentVersion) GetComponentReference(name string) (*ComponentRefere
 
 func (cv *ComponentVersion) ListComponentVersions(ctx context.Context, ocmConfig string) ([]string, error) {
 
-	out, err := ExecuteOutput(ctx, []string{"list", "componentversion", cv.Repository + "//" + cv.Component.Name}, []string{"--output", "yaml"}, NoOcmConfig)
+	out, err := ExecuteOutput(ctx, []string{"list", "componentversion", cv.Repository + "//" + cv.Component.Name}, []string{"--output", "yaml"}, ocmConfig)
 	if err != nil {
 		return nil, err
 	}
