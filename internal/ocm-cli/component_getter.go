@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/openmcp-project/bootstrapper/internal/log"
 )
 
 type ComponentGetter struct {
@@ -86,6 +88,9 @@ func (g *ComponentGetter) OCMConfig() string {
 }
 
 func (g *ComponentGetter) GetReferencedComponentVersion(ctx context.Context, parentCV *ComponentVersion, refName string) (*ComponentVersion, error) {
+	logger := log.GetLogger()
+	logger.Tracef("Comp_Getter: Getting component reference %s in component version %s", refName, parentCV.Component.Name)
+
 	ref, err := parentCV.GetComponentReference(refName)
 	if err != nil {
 		return nil, fmt.Errorf("error getting component reference %s: %w", refName, err)
@@ -97,10 +102,14 @@ func (g *ComponentGetter) GetReferencedComponentVersion(ctx context.Context, par
 		return nil, fmt.Errorf("error getting component version %s: %w", location, err)
 	}
 
+	logger.Tracef("Comp_Getter: Found component reference %s in component version %s", refName, parentCV.Component.Name)
 	return cv, nil
 }
 
 func (g *ComponentGetter) GetReferencedComponentVersionRecursive(ctx context.Context, parentCV *ComponentVersion, refName string) (*ComponentVersion, error) {
+	logger := log.GetLogger()
+	logger.Tracef("Comp_Getter: Searching for component reference %s in component version %s", refName, parentCV.Component.Name)
+
 	// First, try to get the reference directly from the parent component version
 	ref, err := g.GetReferencedComponentVersion(ctx, parentCV, refName)
 	if err == nil {
@@ -123,6 +132,9 @@ func (g *ComponentGetter) GetReferencedComponentVersionRecursive(ctx context.Con
 }
 
 func (g *ComponentGetter) GetComponentVersionForResourceRecursive(ctx context.Context, parentCV *ComponentVersion, resourceName string) (*ComponentVersion, error) {
+	logger := log.GetLogger()
+	logger.Tracef("Comp_Getter: Searching for resource %s in component version %s", resourceName, parentCV.Component.Name)
+
 	// Check if the resource exists in the current component version
 	_, err := parentCV.GetResource(resourceName)
 	if err == nil {
@@ -149,6 +161,9 @@ func (g *ComponentGetter) DownloadTemplatesResource(ctx context.Context, downloa
 }
 
 func (g *ComponentGetter) DownloadDirectoryResourceByLocation(ctx context.Context, rootCV *ComponentVersion, location string, downloadDir string) error {
+	logger := log.GetLogger()
+	logger.Tracef("Comp_Getter: Downloading directory resource from location %s", location)
+
 	var err error
 
 	location = strings.TrimSpace(location)
