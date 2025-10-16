@@ -229,6 +229,7 @@ func (m *DeploymentRepoManager) ApplyTemplates(ctx context.Context) error {
 		"config":           m.Config.OpenMCPOperator.ConfigParsed,
 	}
 
+	templateInput["user"] = m.Config.TemplateInput
 	templateInput["fluxCDEnvPath"] = "./" + EnvsDirectoryName + "/" + m.Config.Environment + "/" + FluxCDDirectoryName
 	templateInput["gitRepoEnvBranch"] = m.Config.DeploymentRepository.RepoBranch
 	templateInput["fluxCDResourcesPath"] = "../../../" + ResourcesDirectoryName + "/" + FluxCDDirectoryName

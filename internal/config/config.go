@@ -9,12 +9,13 @@ import (
 )
 
 type BootstrapperConfig struct {
-	Component            Component            `json:"component"`
-	DeploymentRepository DeploymentRepository `json:"repository"`
-	Providers            Providers            `json:"providers"`
-	ImagePullSecrets     []string             `json:"imagePullSecrets"`
-	OpenMCPOperator      OpenMCPOperator      `json:"openmcpOperator"`
-	Environment          string               `json:"environment"`
+	Component            Component              `json:"component"`
+	DeploymentRepository DeploymentRepository   `json:"repository"`
+	Providers            Providers              `json:"providers"`
+	ImagePullSecrets     []string               `json:"imagePullSecrets"`
+	OpenMCPOperator      OpenMCPOperator        `json:"openmcpOperator"`
+	Environment          string                 `json:"environment"`
+	TemplateInput        map[string]interface{} `json:"templateInput"`
 }
 
 type Component struct {

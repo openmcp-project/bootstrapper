@@ -4,11 +4,17 @@ metadata:
     name: test-configmap
     namespace: default
 data:
-    key: "value"
-    repository: "{{OCM_REPO_URL}}"
-    crossplaneComponentName: "github.com/openmcp-project/openmcp/releasechannel/crossplane"
-    crossplaneComponentVersion: "v0.0.1"
-    crossplaneImage: "ghcr.io/openmcp-project/releasechannel/crossplane"
-    crossplaneVersions: |
-      - v0.0.1
-      - v0.0.2
+  userProvided: |
+    additionalKey1: additionalValue1
+    additionalKey2: additionalValue2
+    myMap:
+      key1: value1
+      key2: value2
+  key: "value"
+  repository: "{{OCM_REPO_URL}}"
+  crossplaneComponentName: "github.com/openmcp-project/openmcp/releasechannel/crossplane"
+  crossplaneComponentVersion: "v0.0.1"
+  crossplaneImage: "ghcr.io/openmcp-project/releasechannel/crossplane"
+  crossplaneVersions: |
+    - v0.0.1
+    - v0.0.2
