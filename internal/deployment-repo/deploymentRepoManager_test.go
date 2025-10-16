@@ -74,6 +74,14 @@ func TestDeploymentRepoManager(t *testing.T) {
 			},
 		},
 		ImagePullSecrets: []string{"imgpull-a", "imgpull-b"},
+		TemplateInput: map[string]interface{}{
+			"additionalKey1": "additionalValue1",
+			"additionalKey2": "additionalValue2",
+			"myMap": map[string]interface{}{
+				"key1": "value1",
+				"key2": "value2",
+			},
+		},
 	}
 
 	bootstrapConfig.SetDefaults()
