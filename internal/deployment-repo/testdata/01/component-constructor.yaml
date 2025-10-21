@@ -131,7 +131,7 @@ components:
       name: openmcp-project
 
     resources:
-      - name: service-provider-test-image
+      - name: platform-service-test-image
         type: ociImage
         version: v0.3.0
         access:

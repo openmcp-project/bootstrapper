@@ -8,6 +8,7 @@ data:
 {{ toYaml .Values.user | indent 4 }}
   key: "value"
   repository: "{{ getOCMRepository }}"
+  rootComponent: "{{ dig "component" "name" "none" (componentVersionAsMap (getRootComponentVersion)) }}"
   {{- $releaseChannelCv := getComponentVersionByReference "releasechannel"  }}
   {{- $crossplaneCv := getComponentVersionByReference $releaseChannelCv "crossplane"  }}
   {{- $crossplaneImageResource := getResourceFromComponentVersion $crossplaneCv "image-crossplane" }}
@@ -20,3 +21,10 @@ data:
   crossplaneVersions: |
   {{- $crossplaneVersions := listComponentVersions $crossplaneCv }}
 {{ toYaml (sortAlpha $crossplaneVersions) | indent 4 }}
+  platformService: |
+  {{- $platformServiceCv := getComponentVersionForResource "platform-service-test-image" }}
+  {{- $platformServiceImageResource := getResourceFromComponentVersion $platformServiceCv "platform-service-test-image" }}
+  {{- $platformServiceImageReference := dig "access" "imageReference" "none" $platformServiceImageResource }}
+  {{- $platformServiceParsedImage := parseImage $platformServiceImageReference }}
+    image: "{{ dig "image" "none" $platformServiceParsedImage }}"
+    version: "{{ $platformServiceImageResource.version }}"
