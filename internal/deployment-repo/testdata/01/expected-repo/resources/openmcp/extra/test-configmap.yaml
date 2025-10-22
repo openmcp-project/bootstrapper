@@ -12,9 +12,13 @@ data:
       key2: value2
   key: "value"
   repository: "{{OCM_REPO_URL}}"
+  rootComponent: "github.com/openmcp-project/openmcp"
   crossplaneComponentName: "github.com/openmcp-project/openmcp/releasechannel/crossplane"
   crossplaneComponentVersion: "v0.0.1"
   crossplaneImage: "ghcr.io/openmcp-project/releasechannel/crossplane"
   crossplaneVersions: |
     - v0.0.1
     - v0.0.2
+  platformService: |
+    image: "ghcr.io/openmcp-project/images/platform-service-test"
+    version: "v0.3.0"
