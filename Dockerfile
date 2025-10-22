@@ -5,7 +5,7 @@ ARG TARGETARCH
 RUN apk add --no-cache curl tar
 WORKDIR /tmp
 # renovate: datasource=github-releases depName=ocm packageName=open-component-model/ocm
-ARG OCM_VERSION=0.31.0
+ARG OCM_VERSION=0.32.0
 RUN curl -L -o ocm.tar.gz https://github.com/open-component-model/ocm/releases/download/v$OCM_VERSION/ocm-$OCM_VERSION-$TARGETOS-$TARGETARCH.tar.gz \
     && tar -xzf ocm.tar.gz
 
