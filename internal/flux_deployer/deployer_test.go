@@ -9,6 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/openmcp-project/bootstrapper/internal/component"
+
 	cfg "github.com/openmcp-project/bootstrapper/internal/config"
 	"github.com/openmcp-project/bootstrapper/internal/flux_deployer"
 	logging "github.com/openmcp-project/bootstrapper/internal/log"
@@ -34,7 +36,7 @@ func TestDeployFluxController(t *testing.T) {
 	d := flux_deployer.NewFluxDeployer(config, "", ocmcli.NoOcmConfig, platformCluster, logging.GetLogger())
 
 	// Initial deployment
-	componentManager1 := &MockComponentManager{
+	componentManager1 := &component.MockComponentManager{
 		ComponentPath: "./testdata/01/component_1.yaml",
 		TemplatesPath: "./testdata/01/fluxcd_resource",
 	}
@@ -48,7 +50,7 @@ func TestDeployFluxController(t *testing.T) {
 	assert.Equal(t, "ghcr.io/fluxcd/source-controller:v1.0.0", deployment.Spec.Template.Spec.Containers[0].Image, "Deployment image does not match expected image")
 
 	// Update deployment
-	componentManager2 := &MockComponentManager{
+	componentManager2 := &component.MockComponentManager{
 		ComponentPath: "./testdata/01/component_2.yaml",
 		TemplatesPath: "./testdata/01/fluxcd_resource",
 	}

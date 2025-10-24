@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 
 	"github.com/openmcp-project/controller-utils/pkg/clusters"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -67,7 +66,7 @@ func ApplyManifests(ctx context.Context, cluster *clusters.Cluster, manifests []
 
 	// Apply objects to the platform cluster
 	for _, u := range unstructuredObjects {
-		if err = ApplyUnstructuredObject(ctx, cluster, u); err != nil {
+		if err = CreateOrUpdate(ctx, cluster, u); err != nil {
 			return err
 		}
 	}
@@ -95,33 +94,23 @@ func ParseManifests(reader io.Reader) ([]*unstructured.Unstructured, error) {
 	return result, nil
 }
 
-func ApplyUnstructuredObject(ctx context.Context, cluster *clusters.Cluster, u *unstructured.Unstructured) error {
+func CreateOrUpdate(ctx context.Context, cluster *clusters.Cluster, obj client.Object) error {
 	logger := log.GetLogger()
-	objectKey := client.ObjectKeyFromObject(u)
-	objectLogString := fmt.Sprintf("%s %s", u.GetObjectKind().GroupVersionKind().String(), objectKey.String())
+	objectKey := client.ObjectKeyFromObject(obj)
+	objectLogString := fmt.Sprintf("%s %s", obj.GetObjectKind().GroupVersionKind().String(), objectKey.String())
 
-	existingObj := &unstructured.Unstructured{}
-	existingObj.SetGroupVersionKind(u.GroupVersionKind())
-	getErr := cluster.Client().Get(ctx, objectKey, existingObj)
-	if getErr != nil {
-		if apierrors.IsNotFound(getErr) {
-			// create object
+	existing := obj.DeepCopyObject().(client.Object)
+	err := cluster.Client().Get(ctx, client.ObjectKeyFromObject(obj), existing)
+
+	if err != nil {
+		if client.IgnoreNotFound(err) == nil {
 			logger.Tracef("Creating object %s", objectLogString)
-			createErr := cluster.Client().Create(ctx, u)
-			if createErr != nil {
-				return fmt.Errorf("error creating object %s: %w", objectLogString, createErr)
-			}
-		} else {
-			return fmt.Errorf("error reading object %s: %w", objectLogString, getErr)
+			return cluster.Client().Create(ctx, obj)
 		}
-	} else {
-		// update object
-		logger.Tracef("Updating object %s", objectLogString)
-		u.SetResourceVersion(existingObj.GetResourceVersion())
-		updateErr := cluster.Client().Update(ctx, u)
-		if updateErr != nil {
-			return fmt.Errorf("error updating object %s: %w", objectLogString, updateErr)
-		}
+		return err
 	}
-	return nil
+
+	logger.Tracef("Updating object %s", objectLogString)
+	obj.SetResourceVersion(existing.GetResourceVersion())
+	return cluster.Client().Update(ctx, obj)
 }

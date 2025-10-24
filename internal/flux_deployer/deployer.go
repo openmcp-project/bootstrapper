@@ -12,6 +12,8 @@ import (
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 
+	"github.com/openmcp-project/bootstrapper/internal/component"
+
 	cfg "github.com/openmcp-project/bootstrapper/internal/config"
 	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
 	"github.com/openmcp-project/bootstrapper/internal/util"
@@ -49,7 +51,7 @@ func NewFluxDeployer(config *cfg.BootstrapperConfig, gitConfigPath, ocmConfigPat
 }
 
 func (d *FluxDeployer) Deploy(ctx context.Context) (err error) {
-	componentManager, err := NewComponentManager(ctx, d.Config, d.OcmConfigPath)
+	componentManager, err := component.NewComponentManager(ctx, d.Config, d.OcmConfigPath)
 	if err != nil {
 		return fmt.Errorf("error creating component manager: %w", err)
 	}
@@ -57,7 +59,7 @@ func (d *FluxDeployer) Deploy(ctx context.Context) (err error) {
 	return d.DeployWithComponentManager(ctx, componentManager)
 }
 
-func (d *FluxDeployer) DeployWithComponentManager(ctx context.Context, componentManager ComponentManager) (err error) {
+func (d *FluxDeployer) DeployWithComponentManager(ctx context.Context, componentManager component.ComponentManager) (err error) {
 	d.log.Infof("Ensure namespace %s exists", d.fluxNamespace)
 	namespaceMutator := resources.NewNamespaceMutator(d.fluxNamespace)
 	if err := resources.CreateOrUpdateResource(ctx, d.platformCluster.Client(), namespaceMutator); err != nil {
@@ -107,7 +109,7 @@ func (d *FluxDeployer) DeployWithComponentManager(ctx context.Context, component
 	d.log.Tracef("Created repo directory: %s", d.repoDir)
 
 	// Get component which contains the fluxcd images as resources
-	d.fluxcdCV, err = componentManager.GetComponentWithImageResources(ctx)
+	d.fluxcdCV, err = componentManager.GetComponentWithImageResources(ctx, FluxCDSourceControllerResourceName)
 	if err != nil {
 		return fmt.Errorf("failed to get fluxcd source controller component version: %w", err)
 	}
