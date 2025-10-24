@@ -1,4 +1,4 @@
-package flux_deployer_test
+package component
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/openmcp-project/bootstrapper/internal/flux_deployer"
 	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
 	"github.com/openmcp-project/bootstrapper/internal/util"
 )
@@ -18,13 +17,13 @@ type MockComponentManager struct {
 	TemplatesPath string
 }
 
-var _ flux_deployer.ComponentManager = (*MockComponentManager)(nil)
+var _ ComponentManager = (*MockComponentManager)(nil)
 
-func (m MockComponentManager) GetComponentWithImageResources(_ context.Context) (*ocmcli.ComponentVersion, error) {
+func (m MockComponentManager) GetComponentWithImageResources(_ context.Context, _ string) (*ocmcli.ComponentVersion, error) {
 	return loadComponentVersion(m.ComponentPath)
 }
 
-func (m MockComponentManager) DownloadTemplatesResource(ctx context.Context, downloadDir string) error {
+func (m MockComponentManager) DownloadTemplatesResource(_ context.Context, downloadDir string) error {
 	return util.CopyDir(m.TemplatesPath, downloadDir)
 }
 
