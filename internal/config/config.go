@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/fluxcd/pkg/apis/meta"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/yaml"
 )
@@ -16,6 +17,7 @@ type BootstrapperConfig struct {
 	OpenMCPOperator      OpenMCPOperator        `json:"openmcpOperator"`
 	Environment          string                 `json:"environment"`
 	TemplateInput        map[string]interface{} `json:"templateInput"`
+	ExternalSecrets      ExternalSecrets        `json:"externalSecrets"`
 }
 
 type Component struct {
@@ -54,6 +56,11 @@ type Manifest struct {
 	Name           string          `json:"name"`
 	Manifest       json.RawMessage `json:"manifest"`
 	ManifestParsed map[string]interface{}
+}
+
+type ExternalSecrets struct {
+	RepositorySecretRef meta.LocalObjectReference   `json:"repositorySecretRef"`
+	ImagePullSecrets    []meta.LocalObjectReference `json:"imagePullSecrets"`
 }
 
 func (c *BootstrapperConfig) ReadFromFile(path string) error {

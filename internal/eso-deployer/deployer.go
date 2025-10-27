@@ -10,17 +10,14 @@ import (
 	sourcev1 "github.com/fluxcd/source-controller/api/v1"
 	"github.com/openmcp-project/controller-utils/pkg/clusters"
 	"github.com/sirupsen/logrus"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
 
 	"github.com/openmcp-project/bootstrapper/internal/component"
 	cfg "github.com/openmcp-project/bootstrapper/internal/config"
-
 	"github.com/openmcp-project/bootstrapper/internal/flux_deployer"
+	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
 	"github.com/openmcp-project/bootstrapper/internal/util"
-
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 type EsoDeployer struct {
@@ -63,7 +60,7 @@ func (d *EsoDeployer) DeployWithComponentManager(ctx context.Context, componentM
 		return fmt.Errorf("failed to get external-secrets-operator-chart resource: %w", err)
 	}
 	d.log.Info("Deploying OCIRepo for ESO chart.")
-	if err = deployRepo(ctx, d, esoChartRes, esoChartRepoName); err != nil {
+	if err = d.deployRepo(ctx, esoChartRes, esoChartRepoName); err != nil {
 		return fmt.Errorf("failed to create helm chart repo: %w", err)
 	}
 
@@ -72,12 +69,12 @@ func (d *EsoDeployer) DeployWithComponentManager(ctx context.Context, componentM
 		return fmt.Errorf("failed to get external-secrets-operator-image resource: %w", err)
 	}
 	d.log.Info("Deploying OCIRepo for ESO image.")
-	if err = deployRepo(ctx, d, esoImageRes, esoImageRepoName); err != nil {
+	if err = d.deployRepo(ctx, esoImageRes, esoImageRepoName); err != nil {
 		return fmt.Errorf("failed to create helm image repo: %w", err)
 	}
 
 	d.log.Info("Deploying HelmRelease for ESO.")
-	if err = deployHelmRelease(ctx, d, esoImageRes); err != nil {
+	if err = d.deployHelmRelease(ctx, esoImageRes); err != nil {
 		return fmt.Errorf("failed to deploy helm release: %w", err)
 	}
 
@@ -85,15 +82,20 @@ func (d *EsoDeployer) DeployWithComponentManager(ctx context.Context, componentM
 	return nil
 }
 
-func deployHelmRelease(ctx context.Context, d *EsoDeployer, res *ocmcli.Resource) error {
-	name, _, _, err := util.ParseImageVersionAndTag(*res.Access.ImageReference)
+func (d *EsoDeployer) deployHelmRelease(ctx context.Context, res *ocmcli.Resource) error {
+	name, tag, _, err := util.ParseImageVersionAndTag(*res.Access.ImageReference)
 	if err != nil {
 		return fmt.Errorf("failed to parse image resource: %w", err)
 	}
 
 	values := map[string]any{
-		"image": map[string]any{"repository": name},
+		"image": map[string]any{
+			"repository": name,
+			"tag":        tag,
+		},
 	}
+	values["imagePullSecrets"] = d.Config.ExternalSecrets.ImagePullSecrets
+
 	encoded, err := json.Marshal(values)
 	if err != nil {
 		return fmt.Errorf("failed to marshal ESO Helm values: %w", err)
@@ -122,8 +124,8 @@ func deployHelmRelease(ctx context.Context, d *EsoDeployer, res *ocmcli.Resource
 	return util.CreateOrUpdate(ctx, d.platformCluster, helmRelease)
 }
 
-func deployRepo(ctx context.Context, d *EsoDeployer, res *ocmcli.Resource, repoName string) error {
-	imageName, tag, digest, err := util.ParseImageVersionAndTag(*res.Access.ImageReference)
+func (d *EsoDeployer) deployRepo(ctx context.Context, res *ocmcli.Resource, repoName string) error {
+	name, tag, digest, err := util.ParseImageVersionAndTag(*res.Access.ImageReference)
 	if err != nil {
 		return err
 	}
@@ -134,12 +136,13 @@ func deployRepo(ctx context.Context, d *EsoDeployer, res *ocmcli.Resource, repoN
 			Namespace: flux_deployer.FluxSystemNamespace,
 		},
 		Spec: sourcev1.OCIRepositorySpec{
-			URL: fmt.Sprintf("oci://%s", imageName),
+			URL: fmt.Sprintf("oci://%s", name),
 			Reference: &sourcev1.OCIRepositoryRef{
 				Tag:    tag,
 				Digest: digest,
 			},
-			Timeout: &metav1.Duration{Duration: 1 * time.Minute},
+			Timeout:   &metav1.Duration{Duration: 1 * time.Minute},
+			SecretRef: &d.Config.ExternalSecrets.RepositorySecretRef,
 		},
 	}
 	return util.CreateOrUpdate(ctx, d.platformCluster, ociRepo)
