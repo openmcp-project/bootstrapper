@@ -142,7 +142,7 @@ func (d *EsoDeployer) deployRepo(ctx context.Context, res *ocmcli.Resource, repo
 				Digest: digest,
 			},
 			Timeout:   &metav1.Duration{Duration: 1 * time.Minute},
-			SecretRef: &d.Config.ExternalSecrets.RepositorySecretRef,
+			SecretRef: d.Config.ExternalSecrets.RepositorySecretRef,
 		},
 	}
 	return util.CreateOrUpdate(ctx, d.platformCluster, ociRepo)

@@ -59,7 +59,7 @@ type Manifest struct {
 }
 
 type ExternalSecrets struct {
-	RepositorySecretRef meta.LocalObjectReference   `json:"repositorySecretRef"`
+	RepositorySecretRef *meta.LocalObjectReference  `json:"repositorySecretRef"`
 	ImagePullSecrets    []meta.LocalObjectReference `json:"imagePullSecrets"`
 }
 
