@@ -75,6 +75,30 @@ Example:
 openmcp-bootstrapper deploy-flux ./examples/bootstrapper-config.yaml --kubeconfig ~/.kube/config --ocm-config ./examples/ocm-config.yaml --git-config ./examples/git-config.yaml ./examples/bootstrapper-config.yaml
 ```
 
+## `deploy-eso`
+The `deploy-eso` command is used to deploy the `external-secrets-operator` to a Kubernetes cluster using the previously deployed `FluxCD` components.
+
+The `deploy-eso` command requires the following parameters:
+* `bootstrapper-config`: Path to the bootstrapper configuration file, optionally containing the `ExternalSecrets` section.
+  * `ExternalSecrets` (optional): Configuration for the external-secrets-operator deployment containing `RepositorySecretRef` and `ImagePullSecrets`
+
+```yaml
+externalSecrets:
+  repositorySecretRef:
+    name: repo-secret
+  imagePullSecrets:
+    - name: image-pull-secret
+```
+
+Optional parameters:
+* `--kubeconfig`: Path to the kubeconfig file of the target Kubernetes cluster. If not set, the value of the `KUBECONFIG` environment variable will be used. If the `KUBECONFIG` environment variable is not set, the default kubeconfig file located at `$HOME/.kube/config` will be used.
+* `--ocm-config`: Path to the OCM configuration file.
+
+Example:
+```shell
+openmcp-bootstrapper deploy-eso ./examples/bootstrapper-config.yaml --kubeconfig ~/.kube/config --ocm-config ./examples/ocm-config.yaml ./examples/bootstrapper-config.yaml
+```
+
 ## `manage-deployment-repo`
 
 The `manageDeploymentRepo` command is used to template the openMCP git ops templates and apply them to the specified git repository and all kustomized resources to the specified Kubernetes cluster.
