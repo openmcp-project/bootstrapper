@@ -599,7 +599,7 @@ func (m *DeploymentRepoManager) RunKustomizeAndApply(ctx context.Context) error 
 	for _, manifest := range manifests {
 		if manifest.GetKind() == "Kustomization" && strings.Contains(manifest.GetAPIVersion(), "kustomize.toolkit.fluxcd.io") {
 			logger.Infof("Applying Kustomization manifest: %s/%s", manifest.GetNamespace(), manifest.GetName())
-			err = util.ApplyUnstructuredObject(ctx, m.TargetCluster, manifest)
+			err = util.CreateOrUpdate(ctx, m.TargetCluster, manifest)
 			if err != nil {
 				return fmt.Errorf("failed to apply Kustomization manifest %s/%s: %w", manifest.GetNamespace(), manifest.GetName(), err)
 			}

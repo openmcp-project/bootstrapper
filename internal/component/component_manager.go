@@ -1,4 +1,4 @@
-package flux_deployer
+package component
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 // ComponentManager bundles the OCM logic required by the FluxDeployer.
 type ComponentManager interface {
-	GetComponentWithImageResources(ctx context.Context) (*ocm_cli.ComponentVersion, error)
+	GetComponentWithImageResources(ctx context.Context, resourceName string) (*ocm_cli.ComponentVersion, error)
 	DownloadTemplatesResource(ctx context.Context, downloadDir string) error
 }
 
@@ -35,8 +35,8 @@ func NewComponentManager(ctx context.Context, config *cfg.BootstrapperConfig, oc
 	return m, nil
 }
 
-func (m *ComponentManagerImpl) GetComponentWithImageResources(ctx context.Context) (*ocm_cli.ComponentVersion, error) {
-	return m.ComponentGetter.GetComponentVersionForResourceRecursive(ctx, m.ComponentGetter.RootComponentVersion(), FluxCDSourceControllerResourceName)
+func (m *ComponentManagerImpl) GetComponentWithImageResources(ctx context.Context, resourceName string) (*ocm_cli.ComponentVersion, error) {
+	return m.ComponentGetter.GetComponentVersionForResourceRecursive(ctx, m.ComponentGetter.RootComponentVersion(), resourceName)
 }
 
 func (m *ComponentManagerImpl) DownloadTemplatesResource(ctx context.Context, downloadDir string) error {
