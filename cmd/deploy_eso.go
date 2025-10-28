@@ -18,11 +18,11 @@ var deployEsoCmd = &cobra.Command{
 	Use:   "deploy-eso",
 	Short: "Deploys External Secrets Operator controllers on the target cluster",
 	Long:  "Deploys External Secrets Operator controllers on the target cluster",
-	Args: cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(1),
 	ArgAliases: []string{
 		"configFile",
 	},
-	Example: `openmcp-bootstrapper deploy-eso "./config.yaml"`,
+	Example: `  openmcp-bootstrapper deploy-eso "./config.yaml"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		configFilePath := args[0]
 		config := &cfg.BootstrapperConfig{}
