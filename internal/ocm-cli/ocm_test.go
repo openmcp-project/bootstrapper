@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/utils/ptr"
 
 	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
@@ -114,6 +115,19 @@ func TestGetComponentVersion(t *testing.T) {
 						MediaType:      ptr.To("application/octet-stream"),
 					},
 				})
+
+				cvMarshaled, err := json.Marshal(cv)
+				assert.NoError(t, err)
+				assert.NotNil(t, cvMarshaled)
+
+				var cvAsMap map[string]interface{}
+				err = json.Unmarshal(cvMarshaled, &cvAsMap)
+				assert.NoError(t, err)
+				assert.NotNil(t, cvAsMap)
+				assert.Contains(t, cvAsMap, "component")
+				assert.Contains(t, cvAsMap["component"], "componentReferences")
+				comp := cvAsMap["component"].(map[string]interface{})
+				assert.Len(t, comp["componentReferences"], 2)
 			},
 		},
 		{
