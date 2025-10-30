@@ -96,7 +96,7 @@ type Component struct {
 	// Version is the version of the component.
 	Version string `json:"version"`
 	// ComponentReferences is a list of references to other components that this component depends on.
-	ComponentReferences []ComponentReference `yaml:"componentReferences"`
+	ComponentReferences []ComponentReference `json:"componentReferences"`
 	// Resources is a list of resources associated with this component, including their names, versions, types, and access information.
 	Resources []Resource `json:"resources"`
 }
