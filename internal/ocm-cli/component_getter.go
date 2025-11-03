@@ -117,14 +117,18 @@ func (g *ComponentGetter) GetReferencedComponentVersionsRecursive(ctx context.Co
 
 	// First, try to get the reference directly from the parent component version
 	refs, err := g.GetReferencedComponentVersions(ctx, parentCV, refName)
-	if err == nil {
+	if err != nil {
+		return nil, fmt.Errorf("error getting referenced component versions for %s: %w", refName, err)
+	}
+
+	if len(refs) > 0 {
 		return refs, nil
 	}
 
 	// If not found, search recursively in all component references
 	for _, componentRef := range parentCV.Component.ComponentReferences {
 		subCVs, err := g.GetReferencedComponentVersions(ctx, parentCV, componentRef.Name)
-		if err != nil {
+		if err != nil || len(subCVs) == 0 {
 			continue
 		}
 		for _, subCV := range subCVs {
@@ -151,7 +155,7 @@ func (g *ComponentGetter) GetComponentVersionsForResourceRecursive(ctx context.C
 	// If not found, search recursively in all component references
 	for _, componentRef := range parentCV.Component.ComponentReferences {
 		subCVs, err := g.GetReferencedComponentVersions(ctx, parentCV, componentRef.Name)
-		if err != nil {
+		if err != nil || len(subCVs) == 0 {
 			continue
 		}
 		for _, subCV := range subCVs {
