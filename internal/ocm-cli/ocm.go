@@ -164,14 +164,16 @@ func (cv *ComponentVersion) GetResourcesByType(resourceType string) []Resource {
 	return resources
 }
 
-// GetComponentReference retrieves a component reference by its name from the component version.
-func (cv *ComponentVersion) GetComponentReference(name string) (*ComponentReference, error) {
+// GetComponentReferences retrieves component references by its name from the component version.
+func (cv *ComponentVersion) GetComponentReferences(name string) []ComponentReference {
+	references := make([]ComponentReference, 0)
+
 	for _, ref := range cv.Component.ComponentReferences {
 		if ref.Name == name {
-			return &ref, nil
+			references = append(references, ref)
 		}
 	}
-	return nil, fmt.Errorf("component reference %s not found in component version %s", name, cv.Component.Name)
+	return references
 }
 
 func (cv *ComponentVersion) ListComponentVersions(ctx context.Context, ocmConfig string) ([]string, error) {

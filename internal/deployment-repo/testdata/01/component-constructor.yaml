@@ -180,10 +180,10 @@ components:
     resources:
       - name: image-crossplane
         type: ociImage
-        version: v0.0.2
+        version: v0.0.1
         access:
           type: ociArtifact
-          imageReference: ghcr.io/openmcp-project/releasechannel/crossplane:v0.0.2
+          imageReference: ghcr.io/openmcp-project/releasechannel/crossplane:v0.0.1
 
   - name: github.com/openmcp-project/openmcp/releasechannel/crossplane
     version: v0.0.2
