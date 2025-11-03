@@ -19,8 +19,12 @@ type MockComponentManager struct {
 
 var _ ComponentManager = (*MockComponentManager)(nil)
 
-func (m MockComponentManager) GetComponentWithImageResources(_ context.Context, _ string) (*ocmcli.ComponentVersion, error) {
-	return loadComponentVersion(m.ComponentPath)
+func (m MockComponentManager) GetComponentsWithImageResources(_ context.Context, _ string) ([]ocmcli.ComponentVersion, error) {
+	cv, err := loadComponentVersion(m.ComponentPath)
+	if err != nil {
+		return nil, err
+	}
+	return []ocmcli.ComponentVersion{*cv}, nil
 }
 
 func (m MockComponentManager) DownloadTemplatesResource(_ context.Context, downloadDir string) error {

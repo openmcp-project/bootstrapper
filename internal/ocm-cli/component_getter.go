@@ -56,10 +56,14 @@ func (g *ComponentGetter) InitializeComponents(ctx context.Context) error {
 
 	cv := g.rootComponentVersion
 	for _, refName := range referenceNames {
-		cv, err = g.GetReferencedComponentVersionRecursive(ctx, cv, refName)
+		cvs, err := g.GetReferencedComponentVersionsRecursive(ctx, cv, refName)
 		if err != nil {
 			return fmt.Errorf("error getting referenced component version %s: %w", refName, err)
 		}
+		if len(cvs) != 1 {
+			return fmt.Errorf("expected exactly one component version for reference %s, got %d", refName, len(cvs))
+		}
+		cv = &cvs[0]
 	}
 
 	g.templatesComponentVersion = cv
@@ -87,69 +91,74 @@ func (g *ComponentGetter) OCMConfig() string {
 	return g.ocmConfig
 }
 
-func (g *ComponentGetter) GetReferencedComponentVersion(ctx context.Context, parentCV *ComponentVersion, refName string) (*ComponentVersion, error) {
+func (g *ComponentGetter) GetReferencedComponentVersions(ctx context.Context, parentCV *ComponentVersion, refName string) ([]ComponentVersion, error) {
 	logger := log.GetLogger()
 	logger.Tracef("Comp_Getter: Getting component reference %s in component version %s", refName, parentCV.Component.Name)
 
-	ref, err := parentCV.GetComponentReference(refName)
-	if err != nil {
-		return nil, fmt.Errorf("error getting component reference %s: %w", refName, err)
-	}
+	refs := parentCV.GetComponentReferences(refName)
+	componentVersions := make([]ComponentVersion, 0, len(refs))
 
-	location := buildLocation(g.repo, ref.ComponentName, ref.Version)
-	cv, err := GetComponentVersion(ctx, location, g.ocmConfig)
-	if err != nil {
-		return nil, fmt.Errorf("error getting component version %s: %w", location, err)
+	for _, ref := range refs {
+		location := buildLocation(g.repo, ref.ComponentName, ref.Version)
+		cv, err := GetComponentVersion(ctx, location, g.ocmConfig)
+		if err != nil {
+			return nil, fmt.Errorf("error getting component version %s: %w", location, err)
+		}
+		componentVersions = append(componentVersions, *cv)
 	}
 
 	logger.Tracef("Comp_Getter: Found component reference %s in component version %s", refName, parentCV.Component.Name)
-	return cv, nil
+	return componentVersions, nil
 }
 
-func (g *ComponentGetter) GetReferencedComponentVersionRecursive(ctx context.Context, parentCV *ComponentVersion, refName string) (*ComponentVersion, error) {
+func (g *ComponentGetter) GetReferencedComponentVersionsRecursive(ctx context.Context, parentCV *ComponentVersion, refName string) ([]ComponentVersion, error) {
 	logger := log.GetLogger()
 	logger.Tracef("Comp_Getter: Searching for component reference %s in component version %s", refName, parentCV.Component.Name)
 
 	// First, try to get the reference directly from the parent component version
-	ref, err := g.GetReferencedComponentVersion(ctx, parentCV, refName)
+	refs, err := g.GetReferencedComponentVersions(ctx, parentCV, refName)
 	if err == nil {
-		return ref, nil
+		return refs, nil
 	}
 
 	// If not found, search recursively in all component references
 	for _, componentRef := range parentCV.Component.ComponentReferences {
-		subCV, err := g.GetReferencedComponentVersion(ctx, parentCV, componentRef.Name)
+		subCVs, err := g.GetReferencedComponentVersions(ctx, parentCV, componentRef.Name)
 		if err != nil {
 			continue
 		}
-		ref, err := g.GetReferencedComponentVersionRecursive(ctx, subCV, refName)
-		if err == nil {
-			return ref, nil
+		for _, subCV := range subCVs {
+			subCvRefs, err := g.GetReferencedComponentVersionsRecursive(ctx, &subCV, refName)
+			if err == nil {
+				return subCvRefs, nil
+			}
 		}
 	}
 
 	return nil, fmt.Errorf("component reference %s not found in component version %s or its references", refName, parentCV.Component.Name)
 }
 
-func (g *ComponentGetter) GetComponentVersionForResourceRecursive(ctx context.Context, parentCV *ComponentVersion, resourceName string) (*ComponentVersion, error) {
+func (g *ComponentGetter) GetComponentVersionsForResourceRecursive(ctx context.Context, parentCV *ComponentVersion, resourceName string) ([]ComponentVersion, error) {
 	logger := log.GetLogger()
 	logger.Tracef("Comp_Getter: Searching for resource %s in component version %s", resourceName, parentCV.Component.Name)
 
 	// Check if the resource exists in the current component version
 	_, err := parentCV.GetResource(resourceName)
 	if err == nil {
-		return parentCV, nil
+		return []ComponentVersion{*parentCV}, nil
 	}
 
 	// If not found, search recursively in all component references
 	for _, componentRef := range parentCV.Component.ComponentReferences {
-		subCV, err := g.GetReferencedComponentVersion(ctx, parentCV, componentRef.Name)
+		subCVs, err := g.GetReferencedComponentVersions(ctx, parentCV, componentRef.Name)
 		if err != nil {
 			continue
 		}
-		cv, err := g.GetComponentVersionForResourceRecursive(ctx, subCV, resourceName)
-		if err == nil {
-			return cv, nil
+		for _, subCV := range subCVs {
+			cvs, err := g.GetComponentVersionsForResourceRecursive(ctx, &subCV, resourceName)
+			if err == nil {
+				return cvs, nil
+			}
 		}
 	}
 
@@ -164,8 +173,6 @@ func (g *ComponentGetter) DownloadDirectoryResourceByLocation(ctx context.Contex
 	logger := log.GetLogger()
 	logger.Tracef("Comp_Getter: Downloading directory resource from location %s", location)
 
-	var err error
-
 	location = strings.TrimSpace(location)
 	segments := strings.Split(location, "/")
 	if len(segments) == 0 {
@@ -177,10 +184,11 @@ func (g *ComponentGetter) DownloadDirectoryResourceByLocation(ctx context.Contex
 
 	cv := rootCV
 	for _, refName := range referenceNames {
-		cv, err = g.GetReferencedComponentVersionRecursive(ctx, cv, refName)
+		cvs, err := g.GetReferencedComponentVersionsRecursive(ctx, cv, refName)
 		if err != nil {
 			return fmt.Errorf("error getting referenced component version %s: %w", refName, err)
 		}
+		cv = &cvs[0]
 	}
 
 	componentLocation := buildLocation(g.repo, cv.Component.Name, cv.Component.Version)

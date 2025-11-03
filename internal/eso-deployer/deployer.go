@@ -50,10 +50,14 @@ func (d *EsoDeployer) Deploy(ctx context.Context) error {
 
 func (d *EsoDeployer) DeployWithComponentManager(ctx context.Context, componentManager component.ComponentManager) error {
 	d.log.Info("Getting OCM component containing ESO resources.")
-	esoComponent, err := componentManager.GetComponentWithImageResources(ctx, "external-secrets-operator-image")
+	esoComponents, err := componentManager.GetComponentsWithImageResources(ctx, "external-secrets-operator-image")
 	if err != nil {
 		return fmt.Errorf("failed to get external-secrets-operator-image component: %w", err)
 	}
+	if len(esoComponents) != 1 {
+		return fmt.Errorf("expected exactly one component with external-secrets-operator-image resource, got %d", len(esoComponents))
+	}
+	esoComponent := &esoComponents[0]
 
 	esoChartRes, err := esoComponent.GetResource("external-secrets-operator-chart")
 	if err != nil {

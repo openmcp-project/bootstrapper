@@ -153,12 +153,15 @@ func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, 
 	}
 
 	for _, cp := range clusterProviders {
-		componentVersion, err := ocmGetter.GetReferencedComponentVersionRecursive(ctx, ocmGetter.RootComponentVersion(), "cluster-provider-"+cp.Name)
+		componentVersions, err := ocmGetter.GetReferencedComponentVersionsRecursive(ctx, ocmGetter.RootComponentVersion(), "cluster-provider-"+cp.Name)
 		if err != nil {
 			return fmt.Errorf("failed to get component version for cluster provider %s: %w", cp, err)
 		}
+		if len(componentVersions) != 1 {
+			return fmt.Errorf("expected exactly one component version for cluster provider %s, got %d", cp, len(componentVersions))
+		}
 
-		imageResource, err := getImageResource(componentVersion)
+		imageResource, err := getImageResource(&componentVersions[0])
 		if err != nil {
 			return fmt.Errorf("failed to get image resource for cluster provider %s: %w", cp, err)
 		}
@@ -177,12 +180,15 @@ func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, 
 	}
 
 	for _, sp := range serviceProviders {
-		componentVersion, err := ocmGetter.GetReferencedComponentVersionRecursive(ctx, ocmGetter.RootComponentVersion(), "service-provider-"+sp.Name)
+		componentVersions, err := ocmGetter.GetReferencedComponentVersionsRecursive(ctx, ocmGetter.RootComponentVersion(), "service-provider-"+sp.Name)
 		if err != nil {
 			return fmt.Errorf("failed to get component version for service provider %s: %w", sp, err)
 		}
+		if len(componentVersions) != 1 {
+			return fmt.Errorf("expected exactly one component version for service provider %s, got %d", sp, len(componentVersions))
+		}
 
-		imageResource, err := getImageResource(componentVersion)
+		imageResource, err := getImageResource(&componentVersions[0])
 		if err != nil {
 			return fmt.Errorf("failed to get image resource for service provider %s: %w", sp, err)
 		}
@@ -201,12 +207,15 @@ func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, 
 	}
 
 	for _, ps := range platformServices {
-		componentVersion, err := ocmGetter.GetReferencedComponentVersionRecursive(ctx, ocmGetter.RootComponentVersion(), "platform-service-"+ps.Name)
+		componentVersions, err := ocmGetter.GetReferencedComponentVersionsRecursive(ctx, ocmGetter.RootComponentVersion(), "platform-service-"+ps.Name)
 		if err != nil {
 			return fmt.Errorf("failed to get component version for platform service %s: %w", ps, err)
 		}
+		if len(componentVersions) != 1 {
+			return fmt.Errorf("expected exactly one component version for platform service %s, got %d", ps, len(componentVersions))
+		}
 
-		imageResource, err := getImageResource(componentVersion)
+		imageResource, err := getImageResource(&componentVersions[0])
 		if err != nil {
 			return fmt.Errorf("failed to get image resource for platform service %s: %w", ps, err)
 		}

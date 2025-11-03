@@ -147,15 +147,23 @@ func (m *DeploymentRepoManager) Initialize(ctx context.Context) (*DeploymentRepo
 
 	logger.Infof("Fetching openmcp-operator component version")
 
-	m.openMCPOperatorCV, err = m.compGetter.GetReferencedComponentVersionRecursive(ctx, m.compGetter.RootComponentVersion(), OpenMCPOperatorComponentName)
+	openMCPOperatorCVs, err := m.compGetter.GetReferencedComponentVersionsRecursive(ctx, m.compGetter.RootComponentVersion(), OpenMCPOperatorComponentName)
 	if err != nil {
 		return m, fmt.Errorf("failed to get openmcp-operator component version: %w", err)
 	}
+	if len(openMCPOperatorCVs) != 1 {
+		return m, fmt.Errorf("expected exactly one openmcp-operator component version, got %d", len(openMCPOperatorCVs))
+	}
+	m.openMCPOperatorCV = &openMCPOperatorCVs[0]
 
-	m.fluxcdCV, err = m.compGetter.GetComponentVersionForResourceRecursive(ctx, m.compGetter.RootComponentVersion(), FluxCDSourceControllerResourceName)
+	fluxcdCVs, err := m.compGetter.GetComponentVersionsForResourceRecursive(ctx, m.compGetter.RootComponentVersion(), FluxCDSourceControllerResourceName)
 	if err != nil {
 		return m, fmt.Errorf("failed to get fluxcd source controller component version: %w", err)
 	}
+	if len(fluxcdCVs) != 1 {
+		return m, fmt.Errorf("expected exactly one fluxcd source controller component version, got %d", len(fluxcdCVs))
+	}
+	m.fluxcdCV = &fluxcdCVs[0]
 
 	m.gitConfig, err = gitconfig.ParseConfig(m.GitConfigPath)
 	if err != nil {
@@ -339,34 +347,42 @@ func (m *DeploymentRepoManager) ApplyCustomResourceDefinitions(ctx context.Conte
 	}
 
 	for _, clusterProvider := range m.Config.Providers.ClusterProviders {
-		clusterProviderCV, err := m.compGetter.GetReferencedComponentVersionRecursive(ctx, m.compGetter.RootComponentVersion(), "cluster-provider-"+clusterProvider.Name)
+		clusterProviderCVs, err := m.compGetter.GetReferencedComponentVersionsRecursive(ctx, m.compGetter.RootComponentVersion(), "cluster-provider-"+clusterProvider.Name)
 		if err != nil {
 			return fmt.Errorf("failed to get component version for cluster provider %s: %w", clusterProvider, err)
 		}
-
-		err = m.applyCRDsForComponentVersion(ctx, clusterProviderCV, crdDirectory)
+		if len(clusterProviderCVs) != 1 {
+			return fmt.Errorf("expected exactly one component version for cluster provider %s, got %d", clusterProvider, len(clusterProviderCVs))
+		}
+		err = m.applyCRDsForComponentVersion(ctx, &clusterProviderCVs[0], crdDirectory)
 		if err != nil {
 			logger.Warnf("Failed to apply CRDs for cluster provider %s: %v", clusterProvider, err)
 		}
 	}
 
 	for _, serviceProvider := range m.Config.Providers.ServiceProviders {
-		serviceProviderCV, err := m.compGetter.GetReferencedComponentVersionRecursive(ctx, m.compGetter.RootComponentVersion(), "service-provider-"+serviceProvider.Name)
+		serviceProviderCVs, err := m.compGetter.GetReferencedComponentVersionsRecursive(ctx, m.compGetter.RootComponentVersion(), "service-provider-"+serviceProvider.Name)
 		if err != nil {
 			return fmt.Errorf("failed to get component version for service provider %s: %w", serviceProvider, err)
 		}
-		err = m.applyCRDsForComponentVersion(ctx, serviceProviderCV, crdDirectory)
+		if len(serviceProviderCVs) != 1 {
+			return fmt.Errorf("expected exactly one component version for service provider %s, got %d", serviceProvider, len(serviceProviderCVs))
+		}
+		err = m.applyCRDsForComponentVersion(ctx, &serviceProviderCVs[0], crdDirectory)
 		if err != nil {
 			logger.Warnf("Failed to apply CRDs for service provider %s: %v", serviceProvider, err)
 		}
 	}
 
 	for _, platformService := range m.Config.Providers.PlatformServices {
-		platformServiceCV, err := m.compGetter.GetReferencedComponentVersionRecursive(ctx, m.compGetter.RootComponentVersion(), "platform-service-"+platformService.Name)
+		platformServiceCVs, err := m.compGetter.GetReferencedComponentVersionsRecursive(ctx, m.compGetter.RootComponentVersion(), "platform-service-"+platformService.Name)
 		if err != nil {
 			return fmt.Errorf("failed to get component version for platform service %s: %w", platformService, err)
 		}
-		err = m.applyCRDsForComponentVersion(ctx, platformServiceCV, crdDirectory)
+		if len(platformServiceCVs) != 1 {
+			return fmt.Errorf("expected exactly one component version for platform service %s, got %d", platformService, len(platformServiceCVs))
+		}
+		err = m.applyCRDsForComponentVersion(ctx, &platformServiceCVs[0], crdDirectory)
 		if err != nil {
 			logger.Warnf("Failed to apply CRDs for platform service %s: %v", platformService, err)
 		}

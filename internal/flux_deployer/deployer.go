@@ -109,10 +109,14 @@ func (d *FluxDeployer) DeployWithComponentManager(ctx context.Context, component
 	d.log.Tracef("Created repo directory: %s", d.repoDir)
 
 	// Get component which contains the fluxcd images as resources
-	d.fluxcdCV, err = componentManager.GetComponentWithImageResources(ctx, FluxCDSourceControllerResourceName)
+	fluxcdCVs, err := componentManager.GetComponentsWithImageResources(ctx, FluxCDSourceControllerResourceName)
 	if err != nil {
 		return fmt.Errorf("failed to get fluxcd source controller component version: %w", err)
 	}
+	if len(fluxcdCVs) != 1 {
+		return fmt.Errorf("expected exactly one fluxcd component version with resource %s, got %d", FluxCDSourceControllerResourceName, len(fluxcdCVs))
+	}
+	d.fluxcdCV = &fluxcdCVs[0]
 
 	// Download resource from gitops-templates component into the download directory
 	d.log.Info("Downloading templates")

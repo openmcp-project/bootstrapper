@@ -38,7 +38,7 @@ func getRootComponentVersion(compGetter *ocmcli.ComponentGetter) *ocmcli.Compone
 	return compGetter.RootComponentVersion()
 }
 
-func getComponentVersionByReference(ctx context.Context, compGetter *ocmcli.ComponentGetter, args ...interface{}) *ocmcli.ComponentVersion {
+func getComponentVersionsByReference(ctx context.Context, compGetter *ocmcli.ComponentGetter, args ...interface{}) []ocmcli.ComponentVersion {
 	logger := log.GetLogger()
 
 	if compGetter == nil {
@@ -50,27 +50,27 @@ func getComponentVersionByReference(ctx context.Context, compGetter *ocmcli.Comp
 	}
 
 	var err error
-	parentCv := compGetter.RootComponentVersion()
+	parentCv := *compGetter.RootComponentVersion()
 	referenceName := args[len(args)-1].(string)
 
 	if len(args) == 2 {
-		parentCv = args[0].(*ocmcli.ComponentVersion)
+		parentCv = args[0].(ocmcli.ComponentVersion)
 	}
 
 	logger.Tracef("Template_Func: getComponentVersionByReference called with parent component version: %s and reference name: %s", parentCv.Component.Name, referenceName)
 
-	cv, err := compGetter.GetReferencedComponentVersionRecursive(ctx, parentCv, referenceName)
-	if err != nil || cv == nil {
+	cvs, err := compGetter.GetReferencedComponentVersionsRecursive(ctx, &parentCv, referenceName)
+	if err != nil || cvs == nil {
 		if err != nil {
 			logger.Errorf("Template_Func: getComponentVersionByReference error getting component version by reference %s from parent component version %s: %v", referenceName, parentCv.Component.Name, err)
 		}
 		return nil
 	}
 
-	return cv
+	return cvs
 }
 
-func getComponentVersionForResource(ctx context.Context, compGetter *ocmcli.ComponentGetter, args ...interface{}) *ocmcli.ComponentVersion {
+func getComponentVersionsForResource(ctx context.Context, compGetter *ocmcli.ComponentGetter, args ...interface{}) []ocmcli.ComponentVersion {
 	logger := log.GetLogger()
 
 	if compGetter == nil {
@@ -82,30 +82,26 @@ func getComponentVersionForResource(ctx context.Context, compGetter *ocmcli.Comp
 	}
 
 	var err error
-	parentCv := compGetter.RootComponentVersion()
+	parentCv := *compGetter.RootComponentVersion()
 	referenceName := args[len(args)-1].(string)
 
 	if len(args) == 2 {
-		parentCv = args[0].(*ocmcli.ComponentVersion)
+		parentCv = args[0].(ocmcli.ComponentVersion)
 	}
 
 	logger.Tracef("Template_Func: getComponentVersionForResource called with parent component version: %s and reference name: %s", parentCv.Component.Name, referenceName)
 
-	cv, err := compGetter.GetComponentVersionForResourceRecursive(ctx, parentCv, referenceName)
-	if err != nil || cv == nil {
+	cvs, err := compGetter.GetComponentVersionsForResourceRecursive(ctx, &parentCv, referenceName)
+	if err != nil || cvs == nil {
 		if err != nil {
 			logger.Errorf("Template_Func: getComponentVersionForResource error getting component version for resource %s from parent component version %s: %v", referenceName, parentCv.Component.Name, err)
 		}
 		return nil
 	}
-	return cv
+	return cvs
 }
 
-func componentVersionAsMap(cv *ocmcli.ComponentVersion) map[string]interface{} {
-	if cv == nil {
-		return nil
-	}
-
+func componentVersionAsMap(cv ocmcli.ComponentVersion) map[string]interface{} {
 	m, err := yaml.Marshal(cv)
 	if err != nil {
 		return nil
@@ -120,7 +116,7 @@ func componentVersionAsMap(cv *ocmcli.ComponentVersion) map[string]interface{} {
 	return output
 }
 
-func getResourceFromComponentVersion(compGetter *ocmcli.ComponentGetter, cv *ocmcli.ComponentVersion, resourceName string) map[string]interface{} {
+func getResourceFromComponentVersion(compGetter *ocmcli.ComponentGetter, cv ocmcli.ComponentVersion, resourceName string) map[string]interface{} {
 	logger := log.GetLogger()
 	logger.Tracef("Template_Func: getResourceFromComponentVersion called with component version: %s and resource name: %s", cv.Component.Name, resourceName)
 
@@ -158,7 +154,7 @@ func getOCMRepository(compGetter *ocmcli.ComponentGetter) string {
 	return compGetter.Repository()
 }
 
-func listComponentVersions(ctx context.Context, compGetter *ocmcli.ComponentGetter, cv *ocmcli.ComponentVersion) []string {
+func listComponentVersions(ctx context.Context, compGetter *ocmcli.ComponentGetter, cv ocmcli.ComponentVersion) []string {
 	logger := log.GetLogger()
 	logger.Tracef("Template_Func: listComponentVersions called with component version: %s", cv.Component.Name)
 
@@ -255,29 +251,29 @@ func (t *TemplateExecution) WithOCMComponentGetter(ctx context.Context, compGett
 			"getRootComponentVersion": func() *ocmcli.ComponentVersion {
 				return getRootComponentVersion(compGetter)
 			},
-			// getComponentVersionByReference returns a ComponentVersion based on the provided reference name.
+			// getComponentVersionsByReference returns a list of ComponentVersion based on the provided reference name.
 			// It can take either one or two arguments:
 			// - One argument: the reference name (string). The search starts from the root component version.
 			// - Two arguments: the first argument is a ComponentVersion to start the search from, and the second argument is the reference name (string).
 			// If the ComponentVersion is not found, it returns nil.
 			// If the ComponentGetter is nil, it panics.
 			// If the number of arguments is less than 1, it panics.
-			"getComponentVersionByReference": func(args ...interface{}) *ocmcli.ComponentVersion {
-				return getComponentVersionByReference(ctx, compGetter, args...)
+			"getComponentVersionsByReference": func(args ...interface{}) []ocmcli.ComponentVersion {
+				return getComponentVersionsByReference(ctx, compGetter, args...)
 			},
-			// getComponentVersionForResource returns a ComponentVersion that contains the specified resource.
+			// getComponentVersionsForResource returns a list of ComponentVersion that contains the specified resource.
 			// It can take either one or two arguments:
 			// - One argument: the resource name (string). The search starts from the root component version.
 			// - Two arguments: the first argument is a ComponentVersion to start the search from, and the second argument is the resource name (string).
 			// If the ComponentVersion is not found, it returns nil.
 			// If the ComponentGetter is nil, it panics.
 			// If the number of arguments is less than 1, it panics.
-			"getComponentVersionForResource": func(args ...interface{}) *ocmcli.ComponentVersion {
-				return getComponentVersionForResource(ctx, compGetter, args...)
+			"getComponentVersionsForResource": func(args ...interface{}) []ocmcli.ComponentVersion {
+				return getComponentVersionsForResource(ctx, compGetter, args...)
 			},
 			// componentVersionAsMap converts a ComponentVersion to a map[string]interface{}.
 			// If the ComponentVersion is nil, it returns nil.
-			"componentVersionAsMap": func(cv *ocmcli.ComponentVersion) map[string]interface{} {
+			"componentVersionAsMap": func(cv ocmcli.ComponentVersion) map[string]interface{} {
 				return componentVersionAsMap(cv)
 			},
 			// getResourceFromComponentVersion retrieves a resource from the given ComponentVersion by its name.
@@ -287,7 +283,7 @@ func (t *TemplateExecution) WithOCMComponentGetter(ctx context.Context, compGett
 			// It returns the resource as a map[string]interface{} or nil if not found.
 			// If the ComponentGetter is nil, it panics.
 			// If the resource is not found or an error occurs, it returns nil.
-			"getResourceFromComponentVersion": func(cv *ocmcli.ComponentVersion, resourceName string) map[string]interface{} {
+			"getResourceFromComponentVersion": func(cv ocmcli.ComponentVersion, resourceName string) map[string]interface{} {
 				return getResourceFromComponentVersion(compGetter, cv, resourceName)
 			},
 			// listComponentVersions lists all available versions of the given ComponentVersion's component.
@@ -296,7 +292,7 @@ func (t *TemplateExecution) WithOCMComponentGetter(ctx context.Context, compGett
 			// It returns a slice of version strings or nil if an error occurs.
 			// If the ComponentGetter is nil, it panics.
 			// If an error occurs while listing versions, it returns nil.
-			"listComponentVersions": func(cv *ocmcli.ComponentVersion) []string {
+			"listComponentVersions": func(cv ocmcli.ComponentVersion) []string {
 				return listComponentVersions(ctx, compGetter, cv)
 			},
 		})
