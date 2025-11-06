@@ -40,7 +40,7 @@ func NewDelimiterConfig(template string) *DelimiterConfig {
 // and returns the cleaned-up template string along with the Delimiter, or an error if parsing fails.
 // It always returns a Delimiter, defaulting to "{{" and "}}" if no configuration is found.
 // Delimiter configuration string needs to be in the first line of the template, e.g.:
-// #?bootstrap { "template": { "delims": { "start": "[[", "end": "]]" } }
+// #?bootstrap {"template": {"delims": {"start": "<<", "end": ">>"}}}
 func (d *DelimiterConfig) ParseAndCleanup() (string, *Delimiter, error) {
 	if !strings.HasPrefix(d.Template, prefixBootstrap) {
 		return d.Template, &Delimiter{Start: defaultStart, End: defaultEnd}, nil
