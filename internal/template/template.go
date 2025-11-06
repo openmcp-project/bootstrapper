@@ -307,12 +307,18 @@ func (t *TemplateExecution) WithOCMComponentGetter(ctx context.Context, compGett
 func (t *TemplateExecution) Execute(name, template string, input map[string]interface{}) ([]byte, error) {
 	tmpl := gotmpl.New(name)
 
+	template, delims, err := NewDelimiterConfig(template).ParseAndCleanup()
+	if err != nil {
+		return nil, err
+	}
+	tmpl = tmpl.Delims(delims.Start, delims.End)
+
 	for _, fm := range t.funcMaps {
 		tmpl.Funcs(fm)
 	}
 
 	tmpl.Option("missingkey=" + t.missingKeyOption)
-	_, err := tmpl.Parse(template)
+	_, err = tmpl.Parse(template)
 	if err != nil {
 		return nil, TemplateErrorBuilder(err).WithSource(&template).WithInput(input, t.templateInputFormatter).Build()
 	}
