@@ -204,6 +204,27 @@ Example:
 openmcp-bootstrapper manage-deployment-repo --kubeconfig ~/.kube/config --ocm-config ./examples/ocm-config.yaml --git-config ./examples/git-config.yaml --extra-manifest-dir ./my-custom-manifests ./examples/bootstrapper-config.yaml
 ```
 
+### Templating (delimiters)
+The `manage-deployment-repo` command templates the openMCP git ops templates using the [Go text/template package](https://pkg.go.dev/text/template).
+By default, the delimiters `{{` and `}}` are used for templating. 
+If your custom manifests in the `extra-manifest-dir` also use these delimiters, but are not meant to be templated by the bootstrapper, you can change the delimiters used by the bootstrapper by adding the following comment at the top of your custom manifest files:
+
+```yaml
+#?bootstrap {"template": {"delims": {"start": "<<", "end": ">>"}}}
+```
+
+Example:
+```yaml
+#?bootstrap {"template": {"delims": {"start": "<<", "end": ">>"}}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-configmap
+data:
+  foo: "<< .Values.myValue >>" # This will be templated by the bootstrapper
+  bar: "{{ .Values.myValue }}" # This will *not* be templated by the bootstrapper
+```
+
 ## Requirements and Setup
 
 This project uses the [cobra library](https://github.com/spf13/cobra) for command line parsing.
