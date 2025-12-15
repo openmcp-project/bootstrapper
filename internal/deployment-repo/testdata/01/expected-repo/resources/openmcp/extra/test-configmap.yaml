@@ -4,9 +4,12 @@ metadata:
     name: test-configmap
     namespace: default
 data:
+  environment: "<environment>"
+  setByUserPatch: "<setByUserPatch>"
   userProvided: |
     additionalKey1: additionalValue1
     additionalKey2: additionalValue2
+    funkyVar: funkyValue
     myMap:
       key1: value1
       key2: value2

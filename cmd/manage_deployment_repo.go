@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	FlagExtraManifestDir = "extra-manifest-dir"
+	FlagExtraManifestDir     = "extra-manifest-dir"
+	FlagKustomizationPatches = "kustomization-patches"
 )
 
 type LogWriter struct{}
@@ -68,6 +69,7 @@ openmcp-bootstrapper manage-deployment-repo <configFile>`,
 			cmd.Flag(FlagGitConfig).Value.String(),
 			cmd.Flag(FlagOcmConfig).Value.String(),
 			cmd.Flag(FlagExtraManifestDir).Value.String(),
+			cmd.Flag(FlagKustomizationPatches).Value.String(),
 		).Initialize(cmd.Context())
 
 		defer func() {
@@ -124,6 +126,7 @@ func init() {
 	manageDeploymentRepoCmd.Flags().String(FlagGitConfig, "", "Git configuration file")
 	manageDeploymentRepoCmd.Flags().String(FlagKubeConfig, "", "Kubernetes configuration file")
 	manageDeploymentRepoCmd.Flags().String(FlagExtraManifestDir, "", "Directory containing extra manifests to apply")
+	manageDeploymentRepoCmd.Flags().String(FlagKustomizationPatches, "", "YAML file containing kustomization patches to apply")
 
 	if err := manageDeploymentRepoCmd.MarkFlagRequired(FlagGitConfig); err != nil {
 		panic(err)

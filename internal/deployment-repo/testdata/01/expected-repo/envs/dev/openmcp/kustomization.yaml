@@ -11,3 +11,18 @@ secretGenerator:
     namespace: openmcp-system
     files:
       - config=config/openmcp-operator-config.yaml
+patches:
+  - patch: |-
+      - op: replace
+        path: /data/setByUserPatch
+        value: funkyValue
+    target:
+      kind: ConfigMap
+      name: test-configmap
+  - target:
+      kind: ConfigMap
+      name: test-configmap
+    patch: |-
+      - op: replace
+        path: /data/environment
+        value: dev

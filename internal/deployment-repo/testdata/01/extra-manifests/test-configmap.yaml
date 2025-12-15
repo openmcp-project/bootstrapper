@@ -4,6 +4,8 @@ metadata:
     name: test-configmap
     namespace: default
 data:
+  environment: "<environment>"
+  setByUserPatch: "<setByUserPatch>"
   userProvided: |
 {{ toYaml .Values.user | indent 4 }}
   key: "value"

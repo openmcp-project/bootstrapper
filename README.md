@@ -110,9 +110,21 @@ Optional parameters:
 * `--kubeconfig`: Path to the kubeconfig file of the target Kubernetes cluster. If not set, the value of the `KUBECONFIG` environment variable will be used. If the `KUBECONFIG` environment variable is not set, the default kubeconfig file located at `$HOME/.kube/config` will be used.
 * `--ocm-config`: Path to the OCM configuration file.
 * `--extra-manifest-dir` (repeatable): Path to an extra manifest directory that should be added to the kustomization. This can be used to add custom resources to the deployment.
-* 
-
-
+* `--kustomization-patches`: Path to a file that contains kustomization patches to be applied to the generated openMCP kustomization.yaml file, e.g.:
+```yaml
+ patches:
+  - target:
+      kind: Cluster
+      name: platform
+    patch: |-
+      - op: replace
+        path: /metadata/labels/gardener.clusters.openmcp.cloud~1environment
+        value: {{ .Values.openmcpOperator.environment }}
+      - op: replace
+        path: /spec/profile
+        value: {{ .Values.openmcpOperator.environment }}.gardener.shoot-large
+```
+  
 The `manage-deployment-repo` requires a bootstrapper configuration file in YAML format. The configuration file contains the following sections:
 * `component` (required): The OCM component version to be deployed. The location must be in the format `<OCM Registry Location>//<Component Name>:<version>`. For example: `gh
 * `repository` (required): The git repository where the FluxCD components should be deployed to. The `url` field specifies the URL of the git repository and the `branch` field specifies the branch to be used.
