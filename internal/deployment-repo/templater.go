@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-git/v5"
@@ -63,6 +64,10 @@ func TemplateDir(ctx context.Context, templateDirectory string, templateInput ma
 
 			logger.Debugf("Found template file: %s", relativePath)
 
+			if strings.Contains(relativePath, "patches.yaml") {
+				logger.Debugf("Found patches file: %s, skipping templating", relativePath)
+			}
+
 			templateFromFile, errInWalk = os.ReadFile(path)
 			if errInWalk != nil {
 				return fmt.Errorf("failed to read template file %s: %w", relativePath, err)
@@ -106,6 +111,21 @@ func TemplateDir(ctx context.Context, templateDirectory string, templateInput ma
 	}
 
 	return nil
+}
+
+func TemplateString(ctx context.Context, templateName, templateSource string, templateInput map[string]interface{}, compGetter *ocmcli.ComponentGetter) (string, error) {
+	te := template.NewTemplateExecution().WithOCMComponentGetter(ctx, compGetter).WithMissingKeyOption("zero")
+
+	wrappedTemplateInput := map[string]interface{}{
+		"Values": templateInput,
+	}
+
+	templateResult, err := te.Execute(templateName, templateSource, wrappedTemplateInput)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute inline template: %w", err)
+	}
+
+	return string(templateResult), nil
 }
 
 var (

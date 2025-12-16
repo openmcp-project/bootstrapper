@@ -62,6 +62,8 @@ type DeploymentRepoManager struct {
 	// ExtraManifestDir is an optional directory containing extra manifests to be added to the deployment repository
 	ExtraManifestDir string
 
+	PatchesFile string
+
 	// Internals
 	// workDir is a temporary directory used for processing
 	workDir string
@@ -89,13 +91,14 @@ type DeploymentRepoManager struct {
 }
 
 // NewDeploymentRepoManager creates a new DeploymentRepoManager with the specified parameters.
-func NewDeploymentRepoManager(config *config.BootstrapperConfig, targetCluster *clusters.Cluster, gitConfigPath, ocmConfigPath, extraManifestDir string) *DeploymentRepoManager {
+func NewDeploymentRepoManager(config *config.BootstrapperConfig, targetCluster *clusters.Cluster, gitConfigPath, ocmConfigPath, extraManifestDir, patchesFile string) *DeploymentRepoManager {
 	return &DeploymentRepoManager{
 		Config:           config,
 		TargetCluster:    targetCluster,
 		GitConfigPath:    gitConfigPath,
 		OcmConfigPath:    ocmConfigPath,
 		ExtraManifestDir: extraManifestDir,
+		PatchesFile:      patchesFile,
 	}
 }
 
@@ -248,6 +251,30 @@ func (m *DeploymentRepoManager) ApplyTemplates(ctx context.Context) error {
 	}
 
 	templateInput["images"] = make(map[string]interface{})
+
+	if len(m.PatchesFile) > 0 {
+		var userKustomizationPatches map[string]interface{}
+		patchesRaw, err := os.ReadFile(m.PatchesFile)
+		if err != nil {
+			return fmt.Errorf("failed to read patches file %s: %w", m.PatchesFile, err)
+		}
+
+		patches, err := TemplateString(ctx, "userPatches", string(patchesRaw), templateInput, m.compGetter)
+		if err != nil {
+			return fmt.Errorf("failed to template user patches file %s: %w", m.PatchesFile, err)
+		}
+
+		err = yaml.Unmarshal([]byte(patches), &userKustomizationPatches)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal user patches from file %s: %w", m.PatchesFile, err)
+		}
+
+		if userKustomizationPatches["patches"] == nil {
+			return fmt.Errorf("no patches found in user patches file %s", m.PatchesFile)
+		}
+
+		templateInput["userKustomizationPatches"] = userKustomizationPatches["patches"]
+	}
 
 	err = applyFluxCDTemplateInput(templateInput, m.fluxcdCV, FluxCDSourceControllerResourceName, "sourceController")
 	if err != nil {
@@ -572,6 +599,11 @@ func (m *DeploymentRepoManager) UpdateResourcesKustomization() error {
 	_, err = fileInWorkTree.Seek(0, 0)
 	if err != nil {
 		return fmt.Errorf("failed to seek resources root kustomization: %w", err)
+	}
+
+	err = fileInWorkTree.Truncate(0)
+	if err != nil {
+		return fmt.Errorf("failed to truncate resources root kustomization: %w", err)
 	}
 
 	logger.Debugf("Adding files to resources root kustomization: %v", files)

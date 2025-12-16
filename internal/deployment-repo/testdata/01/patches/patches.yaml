@@ -1,0 +1,8 @@
+patches:
+- target:
+    kind: ConfigMap
+    name: test-configmap
+  patch: |-
+    - op: replace
+      path: /data/setByUserPatch
+      value: {{ .Values.user.funkyVar }}

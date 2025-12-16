@@ -81,6 +81,7 @@ func TestDeploymentRepoManager(t *testing.T) {
 				"key1": "value1",
 				"key2": "value2",
 			},
+			"funkyVar": "funkyValue",
 		},
 	}
 
@@ -96,7 +97,8 @@ func TestDeploymentRepoManager(t *testing.T) {
 		platformCluster,
 		"./testdata/01/git-config.yaml",
 		"",
-		"./testdata/01/extra-manifests")
+		"./testdata/01/extra-manifests",
+		"./testdata/01/patches/patches.yaml")
 	assert.NotNil(t, deploymentRepoManager)
 
 	_, err = deploymentRepoManager.Initialize(t.Context())
