@@ -16,7 +16,8 @@ func TestNewTemplateInputFromConfig(t *testing.T) {
 		Environment: "test-env",
 		DeploymentRepository: config.DeploymentRepository{
 			RepoURL:    "test-repo-url",
-			RepoBranch: "test-branch",
+			PullBranch: "test-branch-pull",
+			PushBranch: "test-branch-push",
 		},
 		ImagePullSecrets: []string{"test-secret"},
 	}
@@ -26,12 +27,11 @@ func TestNewTemplateInputFromConfig(t *testing.T) {
 	assert.Equal(t, "./envs/test-env/fluxcd", ti["fluxCDEnvPath"], "fluxCDEnvPath does not match")
 	assert.Equal(t, "../../../resources/fluxcd", ti["fluxCDResourcesPath"], "fluxCDResourcesPath does not match")
 	assert.Equal(t, "../../../resources/openmcp", ti["openMCPResourcesPath"], "openMCPResourcesPath does not match")
-	assert.Equal(t, "test-branch", ti["gitRepoEnvBranch"], "gitRepoEnvBranch does not match")
 	assert.Len(t, ti["imagePullSecrets"].([]map[string]string), 1, "imagePullSecrets length does not match")
 	assert.Equal(t, "test-secret", ti["imagePullSecrets"].([]map[string]string)[0]["name"], "imagePullSecret name does not match")
 	assert.Equal(t, "test-repo-url", ti["git"].(map[string]interface{})["repoUrl"], "git repoUrl does not match")
-	assert.Equal(t, "test-branch", ti["git"].(map[string]interface{})["mainBranch"], "git mainBranch does not match")
-	assert.Equal(t, "test-branch", ti["gitRepoEnvBranch"], "gitRepoEnvBranch does not match")
+	assert.Equal(t, "test-branch-push", ti["git"].(map[string]interface{})["pushBranch"], "git pushBranch does not match")
+	assert.Equal(t, "test-branch-pull", ti["git"].(map[string]interface{})["pullBranch"], "git pullBranch does not match")
 }
 
 func TestTemplateInput_AddImageResource(t *testing.T) {

@@ -6,6 +6,9 @@ metadata:
 data:
   environment: "<environment>"
   setByUserPatch: "<setByUserPatch>"
+  git: |
+    pullBranch: "{{ .Values.git.pullBranch }}"
+    pushBranch: "{{ .Values.git.pushBranch }}"
   userProvided: |
 {{ toYaml .Values.user | indent 4 }}
   key: "value"

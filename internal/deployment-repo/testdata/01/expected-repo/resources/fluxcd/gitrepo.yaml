@@ -8,6 +8,6 @@ spec:
   interval: 5m
   url: {{GIT_REPO_URL}}
   ref:
-    branch: incoming
+    branch: "<branch-name>"
   secretRef:
     name: git

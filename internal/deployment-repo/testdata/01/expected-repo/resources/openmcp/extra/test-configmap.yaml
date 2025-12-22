@@ -6,6 +6,9 @@ metadata:
 data:
   environment: "<environment>"
   setByUserPatch: "<setByUserPatch>"
+  git: |
+    pullBranch: "outgoing"
+    pushBranch: "incoming"
   userProvided: |
     additionalKey1: additionalValue1
     additionalKey2: additionalValue2

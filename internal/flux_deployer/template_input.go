@@ -18,9 +18,9 @@ func NewTemplateInputFromConfig(c *config.BootstrapperConfig) TemplateInput {
 
 		"git": map[string]interface{}{
 			"repoUrl":    c.DeploymentRepository.RepoURL,
-			"mainBranch": c.DeploymentRepository.RepoBranch,
+			"pushBranch": c.DeploymentRepository.PushBranch,
+			"pullBranch": c.DeploymentRepository.PullBranch,
 		},
-		"gitRepoEnvBranch": c.DeploymentRepository.RepoBranch,
 
 		"imagePullSecrets": wrapImagePullSecrets(c.ImagePullSecrets),
 	}
