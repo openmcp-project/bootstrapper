@@ -628,6 +628,10 @@ func (m *DeploymentRepoManager) RunKustomizeAndApply(ctx context.Context) error 
 	opts := krusty.MakeDefaultOptions()
 	kustomizer := krusty.MakeKustomizer(opts)
 
+	if m.TargetCluster == nil {
+		return fmt.Errorf("target cluster is not set")
+	}
+
 	logger.Infof("Running kustomize on %s", filepath.Join(m.gitRepoDir, EnvsDirectoryName, m.Config.Environment))
 	resourceMap, err := kustomizer.Run(fs, filepath.Join(m.gitRepoDir, EnvsDirectoryName, m.Config.Environment))
 	if err != nil {
