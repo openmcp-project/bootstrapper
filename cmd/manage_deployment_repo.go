@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/openmcp-project/controller-utils/pkg/clusters"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/runtime"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -17,8 +18,9 @@ import (
 )
 
 const (
-	FlagExtraManifestDir     = "extra-manifest-dir"
-	FlagKustomizationPatches = "kustomization-patches"
+	FlagExtraManifestDir          = "extra-manifest-dir"
+	FlagKustomizationPatches      = "kustomization-patches"
+	FlagDisableKustomizationApply = "disable-kustomization-apply"
 )
 
 type LogWriter struct{}
@@ -43,13 +45,22 @@ openmcp-bootstrapper manage-deployment-repo <configFile>`,
 	Example: `  openmcp-bootstrapper manage-deployment-repo "./config.yaml"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		configFilePath := args[0]
+		logger := log.GetLogger()
 
 		// disable controller-runtime logging
 		controllerruntime.SetLogger(logr.Discard())
 
-		targetCluster, err := util.GetCluster(cmd.Flag(FlagKubeConfig).Value.String(), "target-cluster", runtime.NewScheme())
+		disableKustomizationApply, err := cmd.Flags().GetBool(FlagDisableKustomizationApply)
 		if err != nil {
-			return fmt.Errorf("failed to get platform cluster: %w", err)
+			return fmt.Errorf("failed to parse disable-kustomization-apply flag: %w", err)
+		}
+
+		var targetCluster *clusters.Cluster
+		if !disableKustomizationApply {
+			targetCluster, err = util.GetCluster(cmd.Flag(FlagKubeConfig).Value.String(), "target-cluster", runtime.NewScheme())
+			if err != nil {
+				return fmt.Errorf("failed to get platform cluster: %w", err)
+			}
 		}
 
 		config := &config.BootstrapperConfig{}
@@ -110,9 +121,13 @@ openmcp-bootstrapper manage-deployment-repo <configFile>`,
 			return fmt.Errorf("failed to commit and push changes: %w", err)
 		}
 
-		err = deploymentRepoManager.RunKustomizeAndApply(cmd.Context())
-		if err != nil {
-			return fmt.Errorf("failed to run kustomize and apply: %w", err)
+		if !disableKustomizationApply {
+			err = deploymentRepoManager.RunKustomizeAndApply(cmd.Context())
+			if err != nil {
+				return fmt.Errorf("failed to run kustomize and apply: %w", err)
+			}
+		} else {
+			logger.Info("Skipping applying kustomization to target cluster as per flag")
 		}
 
 		return nil
@@ -127,6 +142,7 @@ func init() {
 	manageDeploymentRepoCmd.Flags().String(FlagKubeConfig, "", "Kubernetes configuration file")
 	manageDeploymentRepoCmd.Flags().String(FlagExtraManifestDir, "", "Directory containing extra manifests to apply")
 	manageDeploymentRepoCmd.Flags().String(FlagKustomizationPatches, "", "YAML file containing kustomization patches to apply")
+	manageDeploymentRepoCmd.Flags().Bool(FlagDisableKustomizationApply, false, "If true, disables applying the kustomization to the target cluster")
 
 	if err := manageDeploymentRepoCmd.MarkFlagRequired(FlagGitConfig); err != nil {
 		panic(err)
