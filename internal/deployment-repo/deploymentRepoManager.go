@@ -184,11 +184,11 @@ func (m *DeploymentRepoManager) Initialize(ctx context.Context) (*DeploymentRepo
 		return m, fmt.Errorf("failed to clone deployment repository: %w", err)
 	}
 
-	logger.Infof("Checking out or creating branch %s", m.Config.DeploymentRepository.RepoBranch)
+	logger.Infof("Checking out or creating branch %s", m.Config.DeploymentRepository.PushBranch)
 
-	err = CheckoutAndCreateBranchIfNotExists(m.gitRepo, m.Config.DeploymentRepository.RepoBranch, m.gitConfig)
+	err = CheckoutAndCreateBranchIfNotExists(m.gitRepo, m.Config.DeploymentRepository.PushBranch, m.gitConfig)
 	if err != nil {
-		return m, fmt.Errorf("failed to checkout or create branch %s: %w", m.Config.DeploymentRepository.RepoBranch, err)
+		return m, fmt.Errorf("failed to checkout or create branch %s: %w", m.Config.DeploymentRepository.PushBranch, err)
 	}
 
 	return m, nil
@@ -242,12 +242,12 @@ func (m *DeploymentRepoManager) ApplyTemplates(ctx context.Context) error {
 
 	templateInput["user"] = m.Config.TemplateInput
 	templateInput["fluxCDEnvPath"] = "./" + EnvsDirectoryName + "/" + m.Config.Environment + "/" + FluxCDDirectoryName
-	templateInput["gitRepoEnvBranch"] = m.Config.DeploymentRepository.RepoBranch
 	templateInput["fluxCDResourcesPath"] = "../../../" + ResourcesDirectoryName + "/" + FluxCDDirectoryName
 	templateInput["openMCPResourcesPath"] = "../../../" + ResourcesDirectoryName + "/" + OpenMCPDirectoryName
 	templateInput["git"] = map[string]interface{}{
 		"repoUrl":    m.Config.DeploymentRepository.RepoURL,
-		"mainBranch": m.Config.DeploymentRepository.RepoBranch,
+		"pushBranch": m.Config.DeploymentRepository.PushBranch,
+		"pullBranch": m.Config.DeploymentRepository.PullBranch,
 	}
 
 	templateInput["images"] = make(map[string]interface{})
@@ -673,7 +673,7 @@ func (m *DeploymentRepoManager) CommitAndPushChanges(_ context.Context) error {
 		return fmt.Errorf("failed to commit changes: %w", err)
 	}
 
-	err = PushRepo(m.gitRepo, m.Config.DeploymentRepository.RepoBranch, m.gitConfig)
+	err = PushRepo(m.gitRepo, m.Config.DeploymentRepository.PushBranch, m.gitConfig)
 	if err != nil {
 		return fmt.Errorf("failed to push changes to deployment repository: %w", err)
 	}

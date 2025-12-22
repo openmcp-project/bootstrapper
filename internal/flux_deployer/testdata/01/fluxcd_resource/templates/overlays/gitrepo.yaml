@@ -6,4 +6,4 @@ metadata:
   namespace: flux-system
 spec:
   ref:
-    branch: {{ .Values.gitRepoEnvBranch }}
+    branch: {{ .Values.git.pullBranch }}

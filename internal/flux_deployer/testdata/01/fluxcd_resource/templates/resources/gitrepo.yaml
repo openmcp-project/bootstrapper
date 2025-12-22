@@ -8,6 +8,6 @@ spec:
   interval: 5m
   url: {{ .Values.git.repoUrl }}
   ref:
-    branch: {{ .Values.git.mainBranch }}
+    branch: "<branch-name>"
   secretRef:
     name: git

@@ -50,7 +50,8 @@ func TestDeploymentRepoManager(t *testing.T) {
 		Environment: "dev",
 		DeploymentRepository: config.DeploymentRepository{
 			RepoURL:    originDir,
-			RepoBranch: "incoming",
+			PushBranch: "incoming",
+			PullBranch: "outgoing",
 		},
 		OpenMCPOperator: config.OpenMCPOperator{
 			Config: json.RawMessage(`{"someKey": "someValue"}`),

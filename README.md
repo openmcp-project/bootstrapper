@@ -64,7 +64,8 @@ component:
 
 repository:
   url: <git-repo-url>
-  branch: <branch-name>
+  pushBranch: <pull-branch-name> # Branch to push changes to
+  pullBranch: <pull-branch-name> # Branch to pull changes from by FluxCD (if not set, pushBranch is used)
 
 environment:
   name: <environment-name>
@@ -140,7 +141,8 @@ component:
 
 repository:
   url: <git-repo-url>
-  branch: <branch-name>
+  pushBranch: <pull-branch-name> # Branch to push changes to
+  pullBranch: <pull-branch-name> # Branch to pull changes from by FluxCD (if not set, pushBranch is used)
 
 environment:
   name: <environment-name>

@@ -28,7 +28,8 @@ type Component struct {
 
 type DeploymentRepository struct {
 	RepoURL    string `json:"url"`
-	RepoBranch string `json:"branch"`
+	PullBranch string `json:"pullBranch"`
+	PushBranch string `json:"pushBranch"`
 }
 
 type TargetCluster struct {
@@ -80,6 +81,10 @@ func (c *BootstrapperConfig) SetDefaults() {
 	if len(c.Component.OpenMCPOperatorTemplateResourcePath) == 0 {
 		c.Component.OpenMCPOperatorTemplateResourcePath = "gitops-templates/openmcp"
 	}
+
+	if len(c.DeploymentRepository.PullBranch) == 0 {
+		c.DeploymentRepository.PullBranch = c.DeploymentRepository.PushBranch
+	}
 }
 
 func (c *BootstrapperConfig) Validate() error {
@@ -97,8 +102,8 @@ func (c *BootstrapperConfig) Validate() error {
 		errs = append(errs, field.Required(field.NewPath("repository.url"), "repository url is required"))
 	}
 
-	if len(c.DeploymentRepository.RepoBranch) == 0 {
-		errs = append(errs, field.Required(field.NewPath("repository.branch"), "repository branch is required"))
+	if len(c.DeploymentRepository.PullBranch) == 0 {
+		errs = append(errs, field.Required(field.NewPath("repository.pullBranch"), "repository pull branch is required"))
 	}
 
 	if len(c.OpenMCPOperator.Config) == 0 {
