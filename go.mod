@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/fluxcd/helm-controller/api v1.4.5
 	github.com/fluxcd/kustomize-controller/api v1.7.3
-	github.com/fluxcd/pkg/apis/meta v1.23.0
+	github.com/fluxcd/pkg/apis/meta v1.24.0
 	github.com/fluxcd/source-controller/api v1.7.4
 	github.com/go-git/go-billy/v5 v5.7.0
 	github.com/go-git/go-git/v5 v5.16.4
