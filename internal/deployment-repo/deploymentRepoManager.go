@@ -621,31 +621,42 @@ func (m *DeploymentRepoManager) UpdateResourcesKustomization() error {
 	return nil
 }
 
-// RunKustomizeAndApply runs kustomize on the environment directory and applies the resulting manifests to the target cluster.
-func (m *DeploymentRepoManager) RunKustomizeAndApply(ctx context.Context) error {
+// RunKustomize runs kustomize on the environment directory and returns the resulting manifests.
+func (m *DeploymentRepoManager) RunKustomize() ([]*unstructured.Unstructured, error) {
 	logger := log.GetLogger()
 	fs := filesys.MakeFsOnDisk()
 	opts := krusty.MakeDefaultOptions()
 	kustomizer := krusty.MakeKustomizer(opts)
 
 	if m.TargetCluster == nil {
-		return fmt.Errorf("target cluster is not set")
+		return nil, fmt.Errorf("target cluster is not set")
 	}
 
 	logger.Infof("Running kustomize on %s", filepath.Join(m.gitRepoDir, EnvsDirectoryName, m.Config.Environment))
 	resourceMap, err := kustomizer.Run(fs, filepath.Join(m.gitRepoDir, EnvsDirectoryName, m.Config.Environment))
 	if err != nil {
-		return fmt.Errorf("failed to run kustomize: %w", err)
+		return nil, fmt.Errorf("failed to run kustomize: %w", err)
 	}
 	resourcesYAML, err := resourceMap.AsYaml()
 	if err != nil {
-		return fmt.Errorf("failed to convert kustomized resources to YAML: %w", err)
+		return nil, fmt.Errorf("failed to convert kustomized resources to YAML: %w", err)
 	}
 
 	reader := bytes.NewReader(resourcesYAML)
 	manifests, err := util.ParseManifests(reader)
 	if err != nil {
-		return fmt.Errorf("failed to parse kustomized resources: %w", err)
+		return nil, fmt.Errorf("failed to parse kustomized resources: %w", err)
+	}
+
+	return manifests, nil
+}
+
+// RunKustomizeAndApply runs kustomize on the environment directory and applies the resulting manifests to the target cluster.
+func (m *DeploymentRepoManager) RunKustomizeAndApply(ctx context.Context) error {
+	logger := log.GetLogger()
+	manifests, err := m.RunKustomize()
+	if err != nil {
+		return fmt.Errorf("failed to run kustomize: %w", err)
 	}
 
 	for _, manifest := range manifests {

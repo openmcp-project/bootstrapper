@@ -111,6 +111,8 @@ Optional parameters:
 * `--kubeconfig`: Path to the kubeconfig file of the target Kubernetes cluster. If not set, the value of the `KUBECONFIG` environment variable will be used. If the `KUBECONFIG` environment variable is not set, the default kubeconfig file located at `$HOME/.kube/config` will be used.
 * `--ocm-config`: Path to the OCM configuration file.
 * `--extra-manifest-dir` (repeatable): Path to an extra manifest directory that should be added to the kustomization. This can be used to add custom resources to the deployment.
+* `--dry-run`: If set, the git repository and the kustomized resources will not be applied. It will only run the kustomization to check for errors.
+* `--disable-git-apply`: If set, the git repository will not be updated. Only the kustomized resources will be applied to the target Kubernetes cluster.
 * `--disable-kustomize-apply`: If set, the kustomized resources will not be applied to the target Kubernetes cluster. Only the git repository will be updated.
 * `--kustomization-patches`: Path to a file that contains kustomization patches to be applied to the generated openMCP kustomization.yaml file, e.g.:
 ```yaml

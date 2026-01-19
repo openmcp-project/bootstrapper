@@ -20,7 +20,9 @@ import (
 const (
 	FlagExtraManifestDir          = "extra-manifest-dir"
 	FlagKustomizationPatches      = "kustomization-patches"
+	FlagDisableGitPush            = "disable-git-push"
 	FlagDisableKustomizationApply = "disable-kustomization-apply"
+	FlagDryRun                    = "dry-run"
 )
 
 type LogWriter struct{}
@@ -50,9 +52,25 @@ openmcp-bootstrapper manage-deployment-repo <configFile>`,
 		// disable controller-runtime logging
 		controllerruntime.SetLogger(logr.Discard())
 
+		disableGitPush, err := cmd.Flags().GetBool(FlagDisableGitPush)
+		if err != nil {
+			return fmt.Errorf("failed to parse disable-git-push flag: %w", err)
+		}
+
 		disableKustomizationApply, err := cmd.Flags().GetBool(FlagDisableKustomizationApply)
 		if err != nil {
 			return fmt.Errorf("failed to parse disable-kustomization-apply flag: %w", err)
+		}
+
+		dryRun, err := cmd.Flags().GetBool(FlagDryRun)
+		if err != nil {
+			return fmt.Errorf("failed to parse dry-run flag: %w", err)
+		}
+
+		if dryRun {
+			logger.Info("Running in dry-run mode: no changes will be applied to the git repository or the target cluster")
+			disableGitPush = true
+			disableKustomizationApply = true
 		}
 
 		var targetCluster *clusters.Cluster
@@ -116,9 +134,11 @@ openmcp-bootstrapper manage-deployment-repo <configFile>`,
 			return fmt.Errorf("failed to update resources kustomization: %w", err)
 		}
 
-		err = deploymentRepoManager.CommitAndPushChanges(cmd.Context())
-		if err != nil {
-			return fmt.Errorf("failed to commit and push changes: %w", err)
+		if !disableGitPush {
+			err = deploymentRepoManager.CommitAndPushChanges(cmd.Context())
+			if err != nil {
+				return fmt.Errorf("failed to commit and push changes: %w", err)
+			}
 		}
 
 		if !disableKustomizationApply {
@@ -128,6 +148,13 @@ openmcp-bootstrapper manage-deployment-repo <configFile>`,
 			}
 		} else {
 			logger.Info("Skipping applying kustomization to target cluster as per flag")
+		}
+
+		if dryRun {
+			_, err = deploymentRepoManager.RunKustomize()
+			if err != nil {
+				return fmt.Errorf("failed to run kustomize in dry-run mode: %w", err)
+			}
 		}
 
 		return nil
@@ -142,7 +169,9 @@ func init() {
 	manageDeploymentRepoCmd.Flags().String(FlagKubeConfig, "", "Kubernetes configuration file")
 	manageDeploymentRepoCmd.Flags().String(FlagExtraManifestDir, "", "Directory containing extra manifests to apply")
 	manageDeploymentRepoCmd.Flags().String(FlagKustomizationPatches, "", "YAML file containing kustomization patches to apply")
+	manageDeploymentRepoCmd.Flags().Bool(FlagDisableGitPush, false, "If true, disables pushing changes to the git repository")
 	manageDeploymentRepoCmd.Flags().Bool(FlagDisableKustomizationApply, false, "If true, disables applying the kustomization to the target cluster")
+	manageDeploymentRepoCmd.Flags().Bool(FlagDryRun, false, "If true, performs a dry run without applying any changes to the git repo and the target cluster")
 
 	if err := manageDeploymentRepoCmd.MarkFlagRequired(FlagGitConfig); err != nil {
 		panic(err)
