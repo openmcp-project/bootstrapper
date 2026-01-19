@@ -621,6 +621,7 @@ func (m *DeploymentRepoManager) UpdateResourcesKustomization() error {
 	return nil
 }
 
+// RunKustomize runs kustomize on the environment directory and returns the resulting manifests.
 func (m *DeploymentRepoManager) RunKustomize() ([]*unstructured.Unstructured, error) {
 	logger := log.GetLogger()
 	fs := filesys.MakeFsOnDisk()
