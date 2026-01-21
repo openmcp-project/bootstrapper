@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	sigsyaml "sigs.k8s.io/yaml"
 
 	"github.com/openmcp-project/bootstrapper/internal/log"
 )
@@ -113,4 +114,28 @@ func CreateOrUpdate(ctx context.Context, cluster *clusters.Cluster, obj client.O
 	logger.Tracef("Updating object %s", objectLogString)
 	obj.SetResourceVersion(existing.GetResourceVersion())
 	return cluster.Client().Update(ctx, obj)
+}
+
+func PrintUnstructuredObjects(objects []*unstructured.Unstructured, writer io.Writer) error {
+	for i, obj := range objects {
+		// Add separator between objects (except before the first one)
+		if i > 0 {
+			if _, err := writer.Write([]byte("---\n")); err != nil {
+				return fmt.Errorf("error writing separator: %w", err)
+			}
+		}
+
+		// Convert unstructured object to YAML
+		yamlBytes, err := sigsyaml.Marshal(obj.Object)
+		if err != nil {
+			return fmt.Errorf("error marshaling object to YAML: %w", err)
+		}
+
+		// Write YAML to writer
+		if _, err := writer.Write(yamlBytes); err != nil {
+			return fmt.Errorf("error writing YAML: %w", err)
+		}
+	}
+
+	return nil
 }

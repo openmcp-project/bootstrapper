@@ -120,7 +120,11 @@ func TestDeploymentRepoManager(t *testing.T) {
 	err = deploymentRepoManager.UpdateResourcesKustomization()
 	assert.NoError(t, err)
 
-	err = deploymentRepoManager.RunKustomizeAndApply(t.Context())
+	manifests, err := deploymentRepoManager.RunKustomize()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, manifests)
+
+	err = deploymentRepoManager.RunKustomizeAndApply(t.Context(), manifests)
 	assert.NoError(t, err)
 
 	err = deploymentRepoManager.CommitAndPushChanges(t.Context())

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/go-logr/logr"
 	"github.com/openmcp-project/controller-utils/pkg/clusters"
@@ -23,6 +24,7 @@ const (
 	FlagDisableGitPush            = "disable-git-push"
 	FlagDisableKustomizationApply = "disable-kustomization-apply"
 	FlagDryRun                    = "dry-run"
+	FlagPrintKustomized           = "print-kustomized"
 )
 
 type LogWriter struct{}
@@ -65,6 +67,11 @@ openmcp-bootstrapper manage-deployment-repo <configFile>`,
 		dryRun, err := cmd.Flags().GetBool(FlagDryRun)
 		if err != nil {
 			return fmt.Errorf("failed to parse dry-run flag: %w", err)
+		}
+
+		printKustomized, err := cmd.Flags().GetBool(FlagPrintKustomized)
+		if err != nil {
+			return fmt.Errorf("failed to parse print-kustomized flag: %w", err)
 		}
 
 		if dryRun {
@@ -139,10 +146,17 @@ openmcp-bootstrapper manage-deployment-repo <configFile>`,
 			if err != nil {
 				return fmt.Errorf("failed to commit and push changes: %w", err)
 			}
+		} else {
+			logger.Info("Skipping pushing changes to git repository as per flag")
+		}
+
+		manifests, err := deploymentRepoManager.RunKustomize()
+		if err != nil {
+			return fmt.Errorf("failed to run kustomize: %w", err)
 		}
 
 		if !disableKustomizationApply {
-			err = deploymentRepoManager.RunKustomizeAndApply(cmd.Context())
+			err = deploymentRepoManager.RunKustomizeAndApply(cmd.Context(), manifests)
 			if err != nil {
 				return fmt.Errorf("failed to run kustomize and apply: %w", err)
 			}
@@ -150,10 +164,11 @@ openmcp-bootstrapper manage-deployment-repo <configFile>`,
 			logger.Info("Skipping applying kustomization to target cluster as per flag")
 		}
 
-		if dryRun {
-			_, err = deploymentRepoManager.RunKustomize()
+		if printKustomized {
+			logger.Info("Kustomized manifests:")
+			err = util.PrintUnstructuredObjects(manifests, os.Stdout)
 			if err != nil {
-				return fmt.Errorf("failed to run kustomize in dry-run mode: %w", err)
+				return fmt.Errorf("failed to print kustomized manifests: %w", err)
 			}
 		}
 
@@ -172,6 +187,7 @@ func init() {
 	manageDeploymentRepoCmd.Flags().Bool(FlagDisableGitPush, false, "If true, disables pushing changes to the git repository")
 	manageDeploymentRepoCmd.Flags().Bool(FlagDisableKustomizationApply, false, "If true, disables applying the kustomization to the target cluster")
 	manageDeploymentRepoCmd.Flags().Bool(FlagDryRun, false, "If true, performs a dry run without applying any changes to the git repo and the target cluster")
+	manageDeploymentRepoCmd.Flags().Bool(FlagPrintKustomized, false, "If true, prints the kustomized manifests to stdout")
 
 	if err := manageDeploymentRepoCmd.MarkFlagRequired(FlagGitConfig); err != nil {
 		panic(err)
