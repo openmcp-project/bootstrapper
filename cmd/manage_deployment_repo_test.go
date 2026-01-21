@@ -6,11 +6,12 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/stretchr/testify/assert"
+	"sigs.k8s.io/yaml"
+
 	"github.com/openmcp-project/bootstrapper/cmd"
 	"github.com/openmcp-project/bootstrapper/internal/config"
 	testutil "github.com/openmcp-project/bootstrapper/test/utils"
-	"github.com/stretchr/testify/assert"
-	"sigs.k8s.io/yaml"
 )
 
 func TestManageDeploymentRepo(t *testing.T) {
