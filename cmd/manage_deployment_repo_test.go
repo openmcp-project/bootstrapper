@@ -15,7 +15,7 @@ import (
 )
 
 func TestManageDeploymentRepo(t *testing.T) {
-	//expectError := errors.New("expected error")
+	// expectError := errors.New("expected error")
 
 	testutil.DownloadOCMAndAddToPath(t)
 
