@@ -25,6 +25,7 @@ const (
 	FlagDisableKustomizationApply = "disable-kustomization-apply"
 	FlagDryRun                    = "dry-run"
 	FlagPrintKustomized           = "print-kustomized"
+	FlagCommitMessage             = "commit-message"
 )
 
 type LogWriter struct{}
@@ -142,7 +143,7 @@ openmcp-bootstrapper manage-deployment-repo <configFile>`,
 		}
 
 		if !disableGitPush {
-			err = deploymentRepoManager.CommitAndPushChanges(cmd.Context())
+			err = deploymentRepoManager.CommitAndPushChanges(cmd.Context(), cmd.Flag(FlagCommitMessage).Value.String())
 			if err != nil {
 				return fmt.Errorf("failed to commit and push changes: %w", err)
 			}
@@ -188,6 +189,7 @@ func init() {
 	manageDeploymentRepoCmd.Flags().Bool(FlagDisableKustomizationApply, false, "If true, disables applying the kustomization to the target cluster")
 	manageDeploymentRepoCmd.Flags().Bool(FlagDryRun, false, "If true, performs a dry run without applying any changes to the git repo and the target cluster")
 	manageDeploymentRepoCmd.Flags().Bool(FlagPrintKustomized, false, "If true, prints the kustomized manifests to stdout")
+	manageDeploymentRepoCmd.Flags().String(FlagCommitMessage, "apply templates", "Commit message to use when pushing changes to the git repository")
 
 	if err := manageDeploymentRepoCmd.MarkFlagRequired(FlagGitConfig); err != nil {
 		panic(err)
