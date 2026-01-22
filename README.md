@@ -116,6 +116,8 @@ Optional parameters:
 * `--disable-kustomize-apply`: If set, the kustomized resources will not be applied to the target Kubernetes cluster. Only the git repository will be updated.
 * `--print-kustomization`: If set, the generated kustomization.yaml file will be printed to stdout.
 * `--commit-message`: Custom commit message to be used when updating the git repository. If not set, a default commit message will be used.
+* `--commit-author`: Custom commit author to be used when updating the git repository. If not set, the default git user will be used.
+* `--commit-email`: Custom commit email to be used when updating the git repository. If not set, the default git user email will be used.
 * `--kustomization-patches`: Path to a file that contains kustomization patches to be applied to the generated openMCP kustomization.yaml file, e.g.:
 ```yaml
  patches:

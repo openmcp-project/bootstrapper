@@ -133,7 +133,13 @@ func TestDeploymentRepoManager(t *testing.T) {
 	assert.NoError(t, err)
 
 	commitMessage := "Apply deployment repo changes"
-	err = deploymentRepoManager.CommitAndPushChanges(t.Context(), commitMessage)
+	commitAuthor := "Test User"
+	commitEmail := "test@test.test"
+	err = deploymentRepoManager.CommitAndPushChanges(
+		t.Context(),
+		commitMessage,
+		commitAuthor,
+		commitEmail)
 	assert.NoError(t, err)
 
 	// get the latest commit message to verify the push worked
@@ -143,6 +149,8 @@ func TestDeploymentRepoManager(t *testing.T) {
 	originCommit, err := origin.CommitObject(incomingBranchRef.Hash())
 	assert.NoError(t, err)
 	assert.Equal(t, commitMessage, originCommit.Message)
+	assert.Equal(t, commitAuthor, originCommit.Author.Name)
+	assert.Equal(t, commitEmail, originCommit.Author.Email)
 
 	err = originWorkTree.Checkout(&git.CheckoutOptions{
 		Branch: plumbing.NewBranchReferenceName(incomingBranch),

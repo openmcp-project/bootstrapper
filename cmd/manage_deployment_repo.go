@@ -26,6 +26,8 @@ const (
 	FlagDryRun                    = "dry-run"
 	FlagPrintKustomized           = "print-kustomized"
 	FlagCommitMessage             = "commit-message"
+	FlagCommitAuthor              = "commit-author"
+	FlagCommitEmail               = "commit-email"
 )
 
 type LogWriter struct{}
@@ -143,7 +145,11 @@ openmcp-bootstrapper manage-deployment-repo <configFile>`,
 		}
 
 		if !disableGitPush {
-			err = deploymentRepoManager.CommitAndPushChanges(cmd.Context(), cmd.Flag(FlagCommitMessage).Value.String())
+			err = deploymentRepoManager.CommitAndPushChanges(
+				cmd.Context(),
+				cmd.Flag(FlagCommitMessage).Value.String(),
+				cmd.Flag(FlagCommitAuthor).Value.String(),
+				cmd.Flag(FlagCommitEmail).Value.String())
 			if err != nil {
 				return fmt.Errorf("failed to commit and push changes: %w", err)
 			}
@@ -190,6 +196,8 @@ func init() {
 	manageDeploymentRepoCmd.Flags().Bool(FlagDryRun, false, "If true, performs a dry run without applying any changes to the git repo and the target cluster")
 	manageDeploymentRepoCmd.Flags().Bool(FlagPrintKustomized, false, "If true, prints the kustomized manifests to stdout")
 	manageDeploymentRepoCmd.Flags().String(FlagCommitMessage, "apply templates", "Commit message to use when pushing changes to the git repository")
+	manageDeploymentRepoCmd.Flags().String(FlagCommitAuthor, "openmcp", "Git author name to use when committing changes")
+	manageDeploymentRepoCmd.Flags().String(FlagCommitEmail, "noreply@openmcp.cloud", "Git user email to use when committing changes")
 
 	if err := manageDeploymentRepoCmd.MarkFlagRequired(FlagGitConfig); err != nil {
 		panic(err)
