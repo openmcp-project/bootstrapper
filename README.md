@@ -114,6 +114,7 @@ Optional parameters:
 * `--dry-run`: If set, the git repository and the kustomized resources will not be applied. It will only run the kustomization to check for errors.
 * `--disable-git-apply`: If set, the git repository will not be updated. Only the kustomized resources will be applied to the target Kubernetes cluster.
 * `--disable-kustomize-apply`: If set, the kustomized resources will not be applied to the target Kubernetes cluster. Only the git repository will be updated.
+* `--print-kustomization`: If set, the generated kustomization.yaml file will be printed to stdout.
 * `--kustomization-patches`: Path to a file that contains kustomization patches to be applied to the generated openMCP kustomization.yaml file, e.g.:
 ```yaml
  patches:
