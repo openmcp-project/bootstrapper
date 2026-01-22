@@ -21,6 +21,11 @@ import (
 	testutils "github.com/openmcp-project/bootstrapper/test/utils"
 )
 
+const (
+	incomingBranch = "incoming"
+	outgoingBranch = "outgoing"
+)
+
 func TestDeploymentRepoManager(t *testing.T) {
 	testutils.DownloadOCMAndAddToPath(t)
 
@@ -50,8 +55,8 @@ func TestDeploymentRepoManager(t *testing.T) {
 		Environment: "dev",
 		DeploymentRepository: config.DeploymentRepository{
 			RepoURL:    originDir,
-			PushBranch: "incoming",
-			PullBranch: "outgoing",
+			PushBranch: incomingBranch,
+			PullBranch: outgoingBranch,
 		},
 		OpenMCPOperator: config.OpenMCPOperator{
 			Config: json.RawMessage(`{"someKey": "someValue"}`),
@@ -127,11 +132,28 @@ func TestDeploymentRepoManager(t *testing.T) {
 	err = deploymentRepoManager.RunKustomizeAndApply(t.Context(), manifests)
 	assert.NoError(t, err)
 
-	err = deploymentRepoManager.CommitAndPushChanges(t.Context())
+	commitMessage := "Apply deployment repo changes"
+	commitAuthor := "Test User"
+	commitEmail := "test@test.test"
+	err = deploymentRepoManager.CommitAndPushChanges(
+		t.Context(),
+		commitMessage,
+		commitAuthor,
+		commitEmail)
 	assert.NoError(t, err)
 
+	// get the latest commit message to verify the push worked
+	incomingBranchRef, err := origin.Reference(plumbing.NewBranchReferenceName(incomingBranch), true)
+	assert.NoError(t, err)
+	assert.Equal(t, "refs/heads/"+incomingBranch, incomingBranchRef.Name().String())
+	originCommit, err := origin.CommitObject(incomingBranchRef.Hash())
+	assert.NoError(t, err)
+	assert.Equal(t, commitMessage, originCommit.Message)
+	assert.Equal(t, commitAuthor, originCommit.Author.Name)
+	assert.Equal(t, commitEmail, originCommit.Author.Email)
+
 	err = originWorkTree.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.NewBranchReferenceName("incoming"),
+		Branch: plumbing.NewBranchReferenceName(incomingBranch),
 	})
 	assert.NoError(t, err)
 	expectedRepoDir := "./testdata/01/expected-repo"

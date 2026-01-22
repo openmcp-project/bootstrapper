@@ -672,12 +672,12 @@ func (m *DeploymentRepoManager) RunKustomizeAndApply(ctx context.Context, manife
 
 // CommitAndPushChanges commits all changes in the deployment repository and pushes them to the remote repository.
 // If there are no changes to commit, it does nothing.
-func (m *DeploymentRepoManager) CommitAndPushChanges(_ context.Context) error {
+func (m *DeploymentRepoManager) CommitAndPushChanges(_ context.Context, commitMessage, commitAuthor, commitEmail string) error {
 	logger := log.GetLogger()
 
 	logger.Info("Committing and pushing changes to deployment repository")
 
-	err := CommitChanges(m.gitRepo, "apply templates", "openmcp", "noreply@openmcp.cloud")
+	err := CommitChanges(m.gitRepo, commitMessage, commitAuthor, commitEmail)
 	if err != nil {
 		return fmt.Errorf("failed to commit changes: %w", err)
 	}
