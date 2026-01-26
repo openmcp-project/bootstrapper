@@ -114,7 +114,7 @@ Optional parameters:
 * `--dry-run`: If set, the git repository and the kustomized resources will not be applied. It will only run the kustomization to check for errors.
 * `--disable-git-apply`: If set, the git repository will not be updated. Only the kustomized resources will be applied to the target Kubernetes cluster.
 * `--disable-kustomize-apply`: If set, the kustomized resources will not be applied to the target Kubernetes cluster. Only the git repository will be updated.
-* `--print-kustomization`: If set, the generated kustomization.yaml file will be printed to stdout.
+* `--print-kustomized`: If set, print the kustomized manifests to stdout.
 * `--commit-message`: Custom commit message to be used when updating the git repository. If not set, a default commit message will be used.
 * `--commit-author`: Custom commit author to be used when updating the git repository. If not set, the default git user will be used.
 * `--commit-email`: Custom commit email to be used when updating the git repository. If not set, the default git user email will be used.
