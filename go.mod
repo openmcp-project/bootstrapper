@@ -11,7 +11,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.7.0
 	github.com/go-git/go-git/v5 v5.16.4
 	github.com/go-logr/logr v1.4.3
-	github.com/openmcp-project/controller-utils v0.24.0
+	github.com/openmcp-project/controller-utils v0.25.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
