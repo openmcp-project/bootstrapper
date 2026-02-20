@@ -9,12 +9,12 @@ ARG OCM_VERSION=0.35.0
 RUN curl -L -o ocm.tar.gz https://github.com/open-component-model/ocm/releases/download/v$OCM_VERSION/ocm-$OCM_VERSION-$TARGETOS-$TARGETARCH.tar.gz \
     && tar -xzf ocm.tar.gz
 
-# Use distroless as minimal base image to package the component binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static-debian12:nonroot@sha256:a9329520abc449e3b14d5bc3a6ffae065bdde0f02667fa10880c49b35c109fd1
+
+FROM alpine:3.18 AS base
 ARG TARGETOS
 ARG TARGETARCH
 ARG COMPONENT
+RUN apk add --no-cache curl unzip git bash gettext yq
 WORKDIR /
 COPY bin/$COMPONENT.$TARGETOS-$TARGETARCH /<component>
 # Copy ocm binary from downloader stage (adjust path if needed)
