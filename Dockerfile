@@ -10,7 +10,7 @@ RUN curl -L -o ocm.tar.gz https://github.com/open-component-model/ocm/releases/d
     && tar -xzf ocm.tar.gz
 
 
-FROM alpine:3.18@sha256:de0eb0b3f2a47ba1eb89389859a9bd88b28e82f5826b6969ad604979713c2d4f AS base
+FROM alpine:3.23@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS base
 ARG TARGETOS
 ARG TARGETARCH
 ARG COMPONENT
