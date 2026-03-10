@@ -14,7 +14,7 @@ FROM alpine:3.23@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f21
 ARG TARGETOS
 ARG TARGETARCH
 ARG COMPONENT
-RUN apk add --no-cache curl unzip git bash gettext yq
+RUN apk add --no-cache curl unzip git bash gettext jq yq kubectl
 WORKDIR /
 COPY bin/$COMPONENT.$TARGETOS-$TARGETARCH /<component>
 # Copy ocm binary from downloader stage (adjust path if needed)
