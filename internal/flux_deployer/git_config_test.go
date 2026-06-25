@@ -39,6 +39,16 @@ func TestCreateGitCredentialsSecret(t *testing.T) {
 				flux_deployer.KnownHosts: []byte("test-known-hosts"),
 			},
 		},
+		{
+			desc:          "Git secret with basic auth and CA bundle",
+			gitConfigPath: "./testdata/02/git-config-basic-with-ca.yaml",
+			secretName:    "test-secret-basic-ca",
+			expectedData: map[string][]byte{
+				flux_deployer.Username: []byte("test-user"),
+				flux_deployer.Password: []byte("test-pass"),
+				flux_deployer.CACert:   []byte("-----BEGIN CERTIFICATE-----\nMIIDETCCAfmgAwIBAgIUHI87wIw1K6ujI4fL+D8dyoFGkKEwDQYJKoZIhvcNAQEL\nBQAwGDEWMBQGA1UEAwwNTestIFJvb3QgQ0EwHhcNMjQwMTAxMDAwMDAwWhcNMjUw\nMTAxMDAwMDAwWjAYMRYwFAYDVQQDDA1UZXN0IFJvb3QgQ0EwggEiMA0GCSqGSIb3\nDQEBAQUAA4IBDwAwggEKAoIBAQDEqkv2tkuHZqfFNXHrUnBvxqiZKJbqpWK3q17t\n7poq/tWRZg3TqfAqZIP7dDqEtPslQjFoNHu6Aq3h5Yw9v1NMB7tWxLVwCN4GHvqI\nDaoQBQpn3jFpE7GPKAF8Vh2zAeBjSSd7PvE4QKaovF37SWN5cOvqYHgUSZdOICSl\np7QiueVAhxANn6vi5EhAcas9hotQVR0c/XJfkq8t6MSvMcJdOZA0r7pb09D9piZ0\ntFC7KY8SNAXKvwgLqIOIKZtPglXawA7bKpGVtbalzF7LxdRqq/Q6xqzLCDdS8Z43\n6Pkh2p7iu7WYK4HXhiwcJ3HZkJZwcXzK6+KtK+V+8bbvXAgMBAAGjUzBRMB0GA1Ud\nDgQWBBSr46WEDePg6xrf4PSpJ9oNQeExOzAfBgNVHSMEGDAWgBSr46WEDePg6xrf\n4PSpJ9oNQeExOzAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQAB\nfQdFERsB7IKDkU6KimQrPv9075m4TPVTcv2SxhjNXimdF5q67K0+BHKTDLOQIsDv\nh3jFtKe3PUDLV0bP3V0B0Xs0CDTZPsygJwsifmFqWgqKBE4pfr4Flbjf1B0D9TlD\nPBaseyhPJIjPPVekVN3zzE5rPN5O9RY/Bsy3Cr8gvWi40ZFuWrn0ue9P7yiiBfyh\nLM7SiHJOpS8EWYtpFNZryUbzdV4/YqKRYKUX7VD2QYLZ7CAu3ok/i2fzqaLmdCQc\nBg9AHK3fVs7LHQkNeuWQ9cQypoZW7YNPkpZdt47AFzBiQnUbNibug4SfW1ZjGec0\ndQURJgLQ9tNdg4A=\n-----END CERTIFICATE-----\n"),
+			},
+		},
 	}
 
 	for _, tc := range testCases {

@@ -19,6 +19,7 @@ const (
 	Token      = "token"
 	Identity   = "identity"
 	KnownHosts = "known_hosts"
+	CACert     = "ca.crt"
 )
 
 // CreateGitCredentialsSecret creates or updates a Secret with name "git" in the fluxcd namespace.
@@ -72,6 +73,15 @@ func CreateGitCredentialsSecret(ctx context.Context, log *logrus.Logger, gitCred
 				}
 				gitCredentialsData[KnownHosts] = knownHostsContent
 			}
+		}
+
+		if config.TLSCACert != "" {
+			log.Debug("Adding custom CA certificate for git operations")
+			caCert, err := config.DecodeTLSCACert()
+			if err != nil {
+				return fmt.Errorf("error decoding TLS CA certificate: %w", err)
+			}
+			gitCredentialsData[CACert] = caCert
 		}
 	}
 
