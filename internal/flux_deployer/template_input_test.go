@@ -12,28 +12,49 @@ import (
 )
 
 func TestNewTemplateInputFromConfig(t *testing.T) {
-	config := &config.BootstrapperConfig{
-		Environment: "test-env",
-		DeploymentRepository: config.DeploymentRepository{
-			RepoURL:    "test-repo-url",
-			PullBranch: "test-branch-pull",
-			PushBranch: "test-branch-push",
-			Provider:   "github",
+	tests := []struct {
+		name             string
+		provider         string
+		expectedProvider string
+	}{
+		{
+			name:             "provider set to github",
+			provider:         "github",
+			expectedProvider: "github",
 		},
-		ImagePullSecrets: []string{"test-secret"},
+		{
+			name:             "provider unset passes through as empty",
+			provider:         "",
+			expectedProvider: "",
+		},
 	}
 
-	ti := flux_deployer.NewTemplateInputFromConfig(config)
-	assert.NotNil(t, ti, "Expected non-nil TemplateInput")
-	assert.Equal(t, "./envs/test-env/fluxcd", ti["fluxCDEnvPath"], "fluxCDEnvPath does not match")
-	assert.Equal(t, "../../../resources/fluxcd", ti["fluxCDResourcesPath"], "fluxCDResourcesPath does not match")
-	assert.Equal(t, "../../../resources/openmcp", ti["openMCPResourcesPath"], "openMCPResourcesPath does not match")
-	assert.Len(t, ti["imagePullSecrets"].([]map[string]string), 1, "imagePullSecrets length does not match")
-	assert.Equal(t, "test-secret", ti["imagePullSecrets"].([]map[string]string)[0]["name"], "imagePullSecret name does not match")
-	assert.Equal(t, "test-repo-url", ti["git"].(map[string]interface{})["repoUrl"], "git repoUrl does not match")
-	assert.Equal(t, "test-branch-push", ti["git"].(map[string]interface{})["pushBranch"], "git pushBranch does not match")
-	assert.Equal(t, "test-branch-pull", ti["git"].(map[string]interface{})["pullBranch"], "git pullBranch does not match")
-	assert.Equal(t, "github", ti["git"].(map[string]interface{})["provider"], "git provider does not match")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.BootstrapperConfig{
+				Environment: "test-env",
+				DeploymentRepository: config.DeploymentRepository{
+					RepoURL:    "test-repo-url",
+					PullBranch: "test-branch-pull",
+					PushBranch: "test-branch-push",
+					Provider:   tt.provider,
+				},
+				ImagePullSecrets: []string{"test-secret"},
+			}
+
+			ti := flux_deployer.NewTemplateInputFromConfig(cfg)
+			assert.NotNil(t, ti, "Expected non-nil TemplateInput")
+			assert.Equal(t, "./envs/test-env/fluxcd", ti["fluxCDEnvPath"], "fluxCDEnvPath does not match")
+			assert.Equal(t, "../../../resources/fluxcd", ti["fluxCDResourcesPath"], "fluxCDResourcesPath does not match")
+			assert.Equal(t, "../../../resources/openmcp", ti["openMCPResourcesPath"], "openMCPResourcesPath does not match")
+			assert.Len(t, ti["imagePullSecrets"].([]map[string]string), 1, "imagePullSecrets length does not match")
+			assert.Equal(t, "test-secret", ti["imagePullSecrets"].([]map[string]string)[0]["name"], "imagePullSecret name does not match")
+			assert.Equal(t, "test-repo-url", ti["git"].(map[string]interface{})["repoUrl"], "git repoUrl does not match")
+			assert.Equal(t, "test-branch-push", ti["git"].(map[string]interface{})["pushBranch"], "git pushBranch does not match")
+			assert.Equal(t, "test-branch-pull", ti["git"].(map[string]interface{})["pullBranch"], "git pullBranch does not match")
+			assert.Equal(t, tt.expectedProvider, ti["git"].(map[string]interface{})["provider"], "git provider does not match")
+		})
+	}
 }
 
 func TestTemplateInput_AddImageResource(t *testing.T) {
