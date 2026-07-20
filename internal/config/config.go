@@ -88,6 +88,10 @@ func (c *BootstrapperConfig) SetDefaults() {
 	if len(c.DeploymentRepository.PullBranch) == 0 {
 		c.DeploymentRepository.PullBranch = c.DeploymentRepository.PushBranch
 	}
+
+	if len(c.DeploymentRepository.Provider) == 0 {
+		c.DeploymentRepository.Provider = "generic"
+	}
 }
 
 func (c *BootstrapperConfig) Validate() error {
