@@ -248,6 +248,7 @@ func (m *DeploymentRepoManager) ApplyTemplates(ctx context.Context) error {
 		"repoUrl":    m.Config.DeploymentRepository.RepoURL,
 		"pushBranch": m.Config.DeploymentRepository.PushBranch,
 		"pullBranch": m.Config.DeploymentRepository.PullBranch,
+		"provider":   m.Config.DeploymentRepository.Provider,
 	}
 
 	templateInput["images"] = make(map[string]interface{})
