@@ -11,3 +11,6 @@ spec:
     branch: "<branch-name>"
   secretRef:
     name: git
+  {{- if .Values.git.provider }}
+  provider: {{ .Values.git.provider }}
+  {{- end }}

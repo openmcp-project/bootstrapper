@@ -57,6 +57,7 @@ func TestDeploymentRepoManager(t *testing.T) {
 			RepoURL:    originDir,
 			PushBranch: incomingBranch,
 			PullBranch: outgoingBranch,
+			Provider:   "github",
 		},
 		OpenMCPOperator: config.OpenMCPOperator{
 			Config: json.RawMessage(`{"someKey": "someValue"}`),

@@ -18,6 +18,7 @@ func TestNewTemplateInputFromConfig(t *testing.T) {
 			RepoURL:    "test-repo-url",
 			PullBranch: "test-branch-pull",
 			PushBranch: "test-branch-push",
+			Provider:   "github",
 		},
 		ImagePullSecrets: []string{"test-secret"},
 	}
@@ -32,6 +33,7 @@ func TestNewTemplateInputFromConfig(t *testing.T) {
 	assert.Equal(t, "test-repo-url", ti["git"].(map[string]interface{})["repoUrl"], "git repoUrl does not match")
 	assert.Equal(t, "test-branch-push", ti["git"].(map[string]interface{})["pushBranch"], "git pushBranch does not match")
 	assert.Equal(t, "test-branch-pull", ti["git"].(map[string]interface{})["pullBranch"], "git pullBranch does not match")
+	assert.Equal(t, "github", ti["git"].(map[string]interface{})["provider"], "git provider does not match")
 }
 
 func TestTemplateInput_AddImageResource(t *testing.T) {

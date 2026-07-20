@@ -11,3 +11,4 @@ spec:
     branch: "<branch-name>"
   secretRef:
     name: git
+  provider: github
