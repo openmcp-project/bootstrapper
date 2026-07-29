@@ -4,8 +4,8 @@ go 1.26.5
 
 require (
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/fluxcd/helm-controller/api v1.6.2
-	github.com/fluxcd/kustomize-controller/api v1.9.3
+	github.com/fluxcd/helm-controller/api v1.6.3
+	github.com/fluxcd/kustomize-controller/api v1.9.4
 	github.com/fluxcd/pkg/apis/meta v1.31.0
 	github.com/fluxcd/source-controller/api v1.9.3
 	github.com/go-git/go-billy/v5 v5.9.0
