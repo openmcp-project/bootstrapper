@@ -41,6 +41,11 @@ const (
 	FluxCDDirectoryName     = "fluxcd"
 	CRDsDirectoryName       = "crds"
 	ExtraManifestsDirectory = "extra"
+
+	keyName           = "name"
+	keyImage          = "image"
+	kindKustomization = "Kustomization"
+	fluxSystemName    = "flux-system"
 )
 
 // DeploymentRepoManager manages the deployment repository by applying templates and committing changes.
@@ -225,14 +230,14 @@ func (m *DeploymentRepoManager) ApplyTemplates(ctx context.Context) error {
 		templateInput["imagePullSecrets"] = make([]map[string]string, 0, len(m.Config.ImagePullSecrets))
 		for _, secret := range m.Config.ImagePullSecrets {
 			templateInput["imagePullSecrets"] = append(templateInput["imagePullSecrets"].([]map[string]string), map[string]string{
-				"name": secret,
+				keyName: secret,
 			})
 		}
 	}
 
 	templateInput["openmcpOperator"] = map[string]interface{}{
 		"version":          m.openMCPOperatorCV.Component.Version,
-		"image":            imageName,
+		keyImage:           imageName,
 		"tag":              imageTag,
 		"digest":           imageDigest,
 		"imagePullSecrets": m.Config.ImagePullSecrets,
@@ -333,7 +338,7 @@ func applyFluxCDTemplateInput(templateInput map[string]interface{}, fluxcdCV *oc
 	}
 	templateInput["images"].(map[string]interface{})[key] = map[string]interface{}{
 		"version": imageTag,
-		"image":   imageName,
+		keyImage:  imageName,
 		"tag":     imageTag,
 		"digest":  imageDigest,
 	}
@@ -659,7 +664,7 @@ func (m *DeploymentRepoManager) RunKustomizeAndApply(ctx context.Context, manife
 	}
 
 	for _, manifest := range manifests {
-		if manifest.GetKind() == "Kustomization" && strings.Contains(manifest.GetAPIVersion(), "kustomize.toolkit.fluxcd.io") {
+		if manifest.GetKind() == kindKustomization && strings.Contains(manifest.GetAPIVersion(), "kustomize.toolkit.fluxcd.io") {
 			logger.Infof("Applying Kustomization manifest: %s/%s", manifest.GetNamespace(), manifest.GetName())
 			err = util.CreateOrUpdate(ctx, m.TargetCluster, manifest)
 			if err != nil {

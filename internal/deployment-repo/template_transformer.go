@@ -149,7 +149,7 @@ func (t *TemplateTransformer) Transform(ctx context.Context, envName, targetDir 
 	logger.Debugf("Creating Flux kustomization patch file %s", kustomizationFile)
 	rootKustomization := map[string]interface{}{
 		"metadata": map[string]interface{}{
-			"name":      "bootstrap",
+			keyName:     "bootstrap",
 			"namespace": "default",
 		},
 		"spec": map[string]interface{}{
@@ -187,12 +187,12 @@ func (t *TemplateTransformer) Transform(ctx context.Context, envName, targetDir 
 			SourceRef: fluxk.CrossNamespaceSourceReference{
 				Kind:      "GitRepository",
 				Name:      "environments",
-				Namespace: "flux-system",
+				Namespace: fluxSystemName,
 			},
 			DependsOn: []fluxk.DependencyReference{
 				{
-					Name:      "flux-system",
-					Namespace: "flux-system",
+					Name:      fluxSystemName,
+					Namespace: fluxSystemName,
 				},
 			},
 		},
@@ -238,7 +238,7 @@ func writeFluxKustomization(kustomization *fluxk.Kustomization, name, targetDir 
 
 	k.TypeMeta = metav1.TypeMeta{
 		APIVersion: fluxk.GroupVersion.String(),
-		Kind:       "Kustomization",
+		Kind:       kindKustomization,
 	}
 
 	file, err := os.Create(filepath.Join(targetDir, name+".yaml"))
@@ -251,7 +251,7 @@ func writeFluxKustomization(kustomization *fluxk.Kustomization, name, targetDir 
 
 func writeFluxKustomizationPatch(kustomizationPatch map[string]interface{}, name, targetDir string) error {
 	kustomizationPatch["apiVersion"] = fluxk.GroupVersion.String()
-	kustomizationPatch["kind"] = "Kustomization"
+	kustomizationPatch["kind"] = kindKustomization
 
 	patchRaw, err := yaml.Marshal(kustomizationPatch)
 	if err != nil {

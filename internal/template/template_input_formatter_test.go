@@ -15,6 +15,15 @@ import (
 	"github.com/openmcp-project/bootstrapper/internal/template"
 )
 
+const (
+	testKeyMyObj    = "myobj"
+	testKeyMyVarKey = "myvar"
+	testKeyMyVar    = "inner"
+	testKeyMyString = "mystring"
+	testKeyMyInt    = "myint"
+	testValMyString = "val"
+)
+
 func TestTemplateErrorFormatting(t *testing.T) {
 	testCases := []struct {
 		desc                string
@@ -26,11 +35,11 @@ func TestTemplateErrorFormatting(t *testing.T) {
 		{
 			desc: "format import parameters",
 			input: map[string]interface{}{
-				"myobj": map[string]interface{}{
-					"myvar": "inner",
+				testKeyMyObj: map[string]interface{}{
+					testKeyMyVarKey: testKeyMyVar,
 				},
-				"mystring": "val",
-				"myint":    42,
+				testKeyMyString: testValMyString,
+				testKeyMyInt:    42,
 			},
 			prettyPrint:         false,
 			sensitiveParameters: make([]string, 0),
@@ -43,14 +52,14 @@ func TestTemplateErrorFormatting(t *testing.T) {
 		{
 			desc: "hide sensitive data in imports",
 			input: map[string]interface{}{
-				"myobj": map[string]interface{}{
-					"myvar": "inner",
+				testKeyMyObj: map[string]interface{}{
+					testKeyMyVarKey: testKeyMyVar,
 				},
-				"mystring": "val",
-				"myint":    42,
+				testKeyMyString: testValMyString,
+				testKeyMyInt:    42,
 			},
 			prettyPrint:         false,
-			sensitiveParameters: []string{"myobj", "myint"},
+			sensitiveParameters: []string{testKeyMyObj, testKeyMyInt},
 			validate: func(formatted string) {
 				assert.Contains(t, formatted, "\tmyobj: {\"myvar\":\"[...] (string)\"}\n")
 				assert.Contains(t, formatted, "\tmystring: \"val\"\n")
@@ -86,11 +95,11 @@ func TestTemplateErrorFormatting(t *testing.T) {
 		{
 			desc: "pretty print input parameters",
 			input: map[string]interface{}{
-				"myobj": map[string]interface{}{
-					"myvar": "inner",
+				testKeyMyObj: map[string]interface{}{
+					testKeyMyVarKey: testKeyMyVar,
 				},
-				"mystring": "val",
-				"myint":    42,
+				testKeyMyString: testValMyString,
+				testKeyMyInt:    42,
 			},
 			prettyPrint:         true,
 			sensitiveParameters: make([]string, 0),

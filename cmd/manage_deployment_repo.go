@@ -47,7 +47,7 @@ The update is based on the specified component version.
 openmcp-bootstrapper manage-deployment-repo <configFile>`,
 	Args: cobra.ExactArgs(1),
 	ArgAliases: []string{
-		"configFile",
+		ArgConfigFile,
 	},
 	Example: `  openmcp-bootstrapper manage-deployment-repo "./config.yaml"`,
 	RunE: func(cmd *cobra.Command, args []string) error {

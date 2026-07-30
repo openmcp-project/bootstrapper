@@ -20,7 +20,7 @@ var deployEsoCmd = &cobra.Command{
 	Long:  "Deploys External Secrets Operator controllers on the target cluster",
 	Args:  cobra.ExactArgs(1),
 	ArgAliases: []string{
-		"configFile",
+		ArgConfigFile,
 	},
 	Example: `  openmcp-bootstrapper deploy-eso "./config.yaml"`,
 	RunE: func(cmd *cobra.Command, args []string) error {
