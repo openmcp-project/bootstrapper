@@ -20,7 +20,7 @@ var deployFluxCmd = &cobra.Command{
 	Long:  `Deploys Flux controllers on the platform cluster, and establishes synchronization with a Git repository.`,
 	Args:  cobra.ExactArgs(1),
 	ArgAliases: []string{
-		"configFile",
+		ArgConfigFile,
 	},
 	Example: `  openmcp-bootstrapper deploy-flux "./config.yaml"`,
 	RunE: func(cmd *cobra.Command, args []string) error {

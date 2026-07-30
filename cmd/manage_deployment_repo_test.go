@@ -14,6 +14,8 @@ import (
 	testutil "github.com/openmcp-project/bootstrapper/test/utils"
 )
 
+const testProviderName = "test"
+
 func TestManageDeploymentRepo(t *testing.T) {
 	// expectError := errors.New("expected error")
 
@@ -53,18 +55,18 @@ func TestManageDeploymentRepo(t *testing.T) {
 		Providers: config.Providers{
 			ClusterProviders: []config.Provider{
 				{
-					Name:   "test",
+					Name:   testProviderName,
 					Config: json.RawMessage(`{"verbosity": "info"}`),
 				},
 			},
 			ServiceProviders: []config.Provider{
 				{
-					Name: "test",
+					Name: testProviderName,
 				},
 			},
 			PlatformServices: []config.Provider{
 				{
-					Name: "test",
+					Name: testProviderName,
 				},
 			},
 		},

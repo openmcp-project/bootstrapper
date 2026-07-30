@@ -276,8 +276,8 @@ func templateProvider(options *ProviderOptions, templateSource, dir string, repo
 
 	templateInput := map[string]interface{}{
 		"values": map[string]interface{}{
-			"name": options.Name,
-			"image": map[string]interface{}{
+			keyName: options.Name,
+			keyImage: map[string]interface{}{
 				"location":         options.Image,
 				"imagePullSecrets": options.ImagePullSecrets,
 			},

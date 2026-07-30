@@ -4,6 +4,11 @@ import (
 	"testing"
 )
 
+const (
+	testImageNginx = "nginx"
+	testTagLatest  = "latest"
+)
+
 func TestParseImageVersionAndTag(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -16,7 +21,7 @@ func TestParseImageVersionAndTag(t *testing.T) {
 		{
 			name:              "image with tag only",
 			image:             "nginx:1.21.0",
-			expectedImageName: "nginx",
+			expectedImageName: testImageNginx,
 			expectedTag:       "1.21.0",
 			expectedDigest:    "",
 			expectError:       false,
@@ -24,7 +29,7 @@ func TestParseImageVersionAndTag(t *testing.T) {
 		{
 			name:              "image with tag and digest",
 			image:             "nginx:1.21.0@sha256:abc123def456",
-			expectedImageName: "nginx",
+			expectedImageName: testImageNginx,
 			expectedTag:       "1.21.0",
 			expectedDigest:    "sha256:abc123def456",
 			expectError:       false,
@@ -33,7 +38,7 @@ func TestParseImageVersionAndTag(t *testing.T) {
 			name:              "image with latest tag",
 			image:             "ubuntu:latest",
 			expectedImageName: "ubuntu",
-			expectedTag:       "latest",
+			expectedTag:       testTagLatest,
 			expectedDigest:    "",
 			expectError:       false,
 		},
@@ -47,9 +52,9 @@ func TestParseImageVersionAndTag(t *testing.T) {
 		},
 		{
 			name:              "image without explicit tag (defaults to latest)",
-			image:             "nginx",
-			expectedImageName: "nginx",
-			expectedTag:       "latest",
+			image:             testImageNginx,
+			expectedImageName: testImageNginx,
+			expectedTag:       testTagLatest,
 			expectedDigest:    "",
 			expectError:       false,
 		},
@@ -80,7 +85,7 @@ func TestParseImageVersionAndTag(t *testing.T) {
 		{
 			name:              "image with digest only (no tag)",
 			image:             "nginx@sha256:abc123def456",
-			expectedImageName: "nginx",
+			expectedImageName: testImageNginx,
 			expectedTag:       "",
 			expectedDigest:    "sha256:abc123def456",
 			expectError:       false,

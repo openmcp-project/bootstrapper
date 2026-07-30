@@ -6,6 +6,13 @@ import (
 	"testing"
 )
 
+const (
+	testTemplateKey   = "key"
+	testNoValueResult = "name: <no value>"
+	testTemplateName  = "test.yaml"
+	testLine1Col6     = "line 1:6"
+)
+
 func TestCreateErrorIfContainsNoValue(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -19,7 +26,7 @@ func TestCreateErrorIfContainsNoValue(t *testing.T) {
 			name:           "template result contains no value",
 			templateResult: "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: <no value>\ndata:\n  key: value",
 			templateName:   "configmap.yaml",
-			input:          map[string]interface{}{"key": "value"},
+			input:          map[string]interface{}{testTemplateKey: "value"},
 			inputFormatter: NewTemplateInputFormatter(true),
 			expectError:    true,
 		},
@@ -57,8 +64,8 @@ func TestCreateErrorIfContainsNoValue(t *testing.T) {
 		},
 		{
 			name:           "nil input and formatter",
-			templateResult: "name: <no value>",
-			templateName:   "test.yaml",
+			templateResult: testNoValueResult,
+			templateName:   testTemplateName,
 			input:          nil,
 			inputFormatter: nil,
 			expectError:    true,
@@ -111,11 +118,11 @@ func TestNoValueError_Error(t *testing.T) {
 	}{
 		{
 			name:           "single no value error",
-			templateResult: "name: <no value>",
-			templateName:   "test.yaml",
-			input:          map[string]interface{}{"key": "value"},
+			templateResult: testNoValueResult,
+			templateName:   testTemplateName,
+			input:          map[string]interface{}{testTemplateKey: "value"},
 			inputFormatter: NewTemplateInputFormatter(true),
-			expectedInMsg:  []string{"test.yaml", "contains fields with", "no value", "line 1:6"},
+			expectedInMsg:  []string{testTemplateName, "contains fields with", "no value", testLine1Col6},
 		},
 		{
 			name:           "multiple no value errors",
@@ -123,7 +130,7 @@ func TestNoValueError_Error(t *testing.T) {
 			templateName:   "multi.yaml",
 			input:          map[string]interface{}{"other": "data"},
 			inputFormatter: NewTemplateInputFormatter(true),
-			expectedInMsg:  []string{"multi.yaml", "line 1:6", "line 2:11"},
+			expectedInMsg:  []string{"multi.yaml", testLine1Col6, "line 2:11"},
 		},
 		{
 			name:           "no value in middle of line",
@@ -139,7 +146,7 @@ func TestNoValueError_Error(t *testing.T) {
 			templateName:   "nil.yaml",
 			input:          nil,
 			inputFormatter: nil,
-			expectedInMsg:  []string{"nil.yaml", "line 1:6"},
+			expectedInMsg:  []string{"nil.yaml", testLine1Col6},
 		},
 	}
 
@@ -196,7 +203,7 @@ func TestNoValueError_buildErrorMessage(t *testing.T) {
 			name:               "error message without input section (nil formatter)",
 			templateResult:     "name: <no value>",
 			templateName:       "no-formatter.yaml",
-			input:              map[string]interface{}{"key": "value"},
+			input:              map[string]interface{}{testTemplateKey: "value"},
 			inputFormatter:     nil,
 			expectInputSection: false,
 		},
@@ -258,7 +265,7 @@ func TestNoValueError_ErrorImplementsErrorInterface(t *testing.T) {
 	// Test that NoValueError implements the error interface
 	var err error = &NoValueError{
 		templateResult: "test: <no value>",
-		templateName:   "test.yaml",
+		templateName:   testTemplateName,
 		input:          map[string]interface{}{},
 		inputFormatter: NewTemplateInputFormatter(true),
 		message:        "test error message",
@@ -299,7 +306,7 @@ func TestNoValueError_ColumnCalculation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := CreateErrorIfContainsNoValue(tt.templateResult, "test.yaml", nil, nil)
+			err := CreateErrorIfContainsNoValue(tt.templateResult, testTemplateName, nil, nil)
 			if err == nil {
 				t.Fatalf("expected error but got none")
 			}
