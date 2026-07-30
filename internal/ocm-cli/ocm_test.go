@@ -13,8 +13,10 @@ import (
 )
 
 const (
+	ocmCmdGet              = "get"
 	ocmCmdComponentVersion = "componentversion"
 	ocmArgOutput           = "--output"
+	ocmArgOutputYAML       = "yaml"
 )
 
 func TestExecute(t *testing.T) {
@@ -33,30 +35,30 @@ func TestExecute(t *testing.T) {
 	}{
 		{
 			desc:          "get componentversion",
-			commands:      []string{"get", ocmCmdComponentVersion},
-			arguments:     []string{ocmArgOutput, "yaml", ctfIn},
+			commands:      []string{ocmCmdGet, ocmCmdComponentVersion},
+			arguments:     []string{ocmArgOutput, ocmArgOutputYAML, ctfIn},
 			ocmConfig:     ocmcli.NoOcmConfig,
 			expectedError: nil,
 		},
 		{
 			desc:          "get componentversion with invalid argument",
-			commands:      []string{"get", ocmCmdComponentVersion},
-			arguments:     []string{ocmArgOutput, "yaml", "invalid-argument"},
+			commands:      []string{ocmCmdGet, ocmCmdComponentVersion},
+			arguments:     []string{ocmArgOutput, ocmArgOutputYAML, "invalid-argument"},
 			ocmConfig:     ocmcli.NoOcmConfig,
 			expectedError: expectError,
 		},
 		{
 			desc:          "get componentversion with ocm config",
-			commands:      []string{"get", ocmCmdComponentVersion},
-			arguments:     []string{ocmArgOutput, "yaml", ctfIn},
+			commands:      []string{ocmCmdGet, ocmCmdComponentVersion},
+			arguments:     []string{ocmArgOutput, ocmArgOutputYAML, ctfIn},
 			ocmConfig:     "./testdata/01/ocm-config.yaml",
 			expectedError: nil,
 		},
 
 		{
 			desc:          "get componentversion with unsupported ocm config",
-			commands:      []string{"get", ocmCmdComponentVersion},
-			arguments:     []string{ocmArgOutput, "yaml", ctfIn},
+			commands:      []string{ocmCmdGet, ocmCmdComponentVersion},
+			arguments:     []string{ocmArgOutput, ocmArgOutputYAML, ctfIn},
 			ocmConfig:     "./testdata/01/unsupported-ocm-config.yaml",
 			expectedError: expectError,
 		},

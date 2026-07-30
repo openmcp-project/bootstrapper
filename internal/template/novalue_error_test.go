@@ -8,6 +8,7 @@ import (
 
 const (
 	testTemplateKey   = "key"
+	testInputValue    = "value"
 	testNoValueResult = "name: <no value>"
 	testTemplateName  = "test.yaml"
 	testLine1Col6     = "line 1:6"
@@ -26,7 +27,7 @@ func TestCreateErrorIfContainsNoValue(t *testing.T) {
 			name:           "template result contains no value",
 			templateResult: "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: <no value>\ndata:\n  key: value",
 			templateName:   "configmap.yaml",
-			input:          map[string]interface{}{testTemplateKey: "value"},
+			input:          map[string]interface{}{testTemplateKey: testInputValue},
 			inputFormatter: NewTemplateInputFormatter(true),
 			expectError:    true,
 		},
@@ -120,7 +121,7 @@ func TestNoValueError_Error(t *testing.T) {
 			name:           "single no value error",
 			templateResult: testNoValueResult,
 			templateName:   testTemplateName,
-			input:          map[string]interface{}{testTemplateKey: "value"},
+			input:          map[string]interface{}{testTemplateKey: testInputValue},
 			inputFormatter: NewTemplateInputFormatter(true),
 			expectedInMsg:  []string{testTemplateName, "contains fields with", "no value", testLine1Col6},
 		},
@@ -185,15 +186,15 @@ func TestNoValueError_buildErrorMessage(t *testing.T) {
 	}{
 		{
 			name:               "error message with input section",
-			templateResult:     "name: <no value>",
+			templateResult:     testNoValueResult,
 			templateName:       "with-input.yaml",
-			input:              map[string]interface{}{"key": "value", "number": 42},
+			input:              map[string]interface{}{testTemplateKey: testInputValue, "number": 42},
 			inputFormatter:     NewTemplateInputFormatter(true),
 			expectInputSection: true,
 		},
 		{
 			name:               "error message without input section (nil input)",
-			templateResult:     "name: <no value>",
+			templateResult:     testNoValueResult,
 			templateName:       "no-input.yaml",
 			input:              nil,
 			inputFormatter:     NewTemplateInputFormatter(true),
@@ -201,9 +202,9 @@ func TestNoValueError_buildErrorMessage(t *testing.T) {
 		},
 		{
 			name:               "error message without input section (nil formatter)",
-			templateResult:     "name: <no value>",
+			templateResult:     testNoValueResult,
 			templateName:       "no-formatter.yaml",
-			input:              map[string]interface{}{testTemplateKey: "value"},
+			input:              map[string]interface{}{testTemplateKey: testInputValue},
 			inputFormatter:     nil,
 			expectInputSection: false,
 		},

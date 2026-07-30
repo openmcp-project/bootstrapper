@@ -17,9 +17,11 @@ import (
 
 const (
 	testKeyMyObj    = "myobj"
+	testKeyMyVarKey = "myvar"
 	testKeyMyVar    = "inner"
 	testKeyMyString = "mystring"
 	testKeyMyInt    = "myint"
+	testValMyString = "val"
 )
 
 func TestTemplateErrorFormatting(t *testing.T) {
@@ -34,9 +36,9 @@ func TestTemplateErrorFormatting(t *testing.T) {
 			desc: "format import parameters",
 			input: map[string]interface{}{
 				testKeyMyObj: map[string]interface{}{
-					"myvar": testKeyMyVar,
+					testKeyMyVarKey: testKeyMyVar,
 				},
-				testKeyMyString: "val",
+				testKeyMyString: testValMyString,
 				testKeyMyInt:    42,
 			},
 			prettyPrint:         false,
@@ -51,9 +53,9 @@ func TestTemplateErrorFormatting(t *testing.T) {
 			desc: "hide sensitive data in imports",
 			input: map[string]interface{}{
 				testKeyMyObj: map[string]interface{}{
-					"myvar": testKeyMyVar,
+					testKeyMyVarKey: testKeyMyVar,
 				},
-				testKeyMyString: "val",
+				testKeyMyString: testValMyString,
 				testKeyMyInt:    42,
 			},
 			prettyPrint:         false,
@@ -94,9 +96,9 @@ func TestTemplateErrorFormatting(t *testing.T) {
 			desc: "pretty print input parameters",
 			input: map[string]interface{}{
 				testKeyMyObj: map[string]interface{}{
-					"myvar": testKeyMyVar,
+					testKeyMyVarKey: testKeyMyVar,
 				},
-				testKeyMyString: "val",
+				testKeyMyString: testValMyString,
 				testKeyMyInt:    42,
 			},
 			prettyPrint:         true,
