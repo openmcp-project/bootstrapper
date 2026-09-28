@@ -15,3 +15,4 @@ includes:
       GENERATE_DOCS_INDEX: "true"
       CHART_COMPONENTS: "[]"
       DOCKERFILE: '{{.ROOT_DIR}}/Dockerfile'
+      FIPS: 'false'

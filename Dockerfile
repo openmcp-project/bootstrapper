@@ -16,7 +16,7 @@ ARG TARGETARCH
 ARG COMPONENT
 RUN apk add --no-cache curl unzip git bash gettext jq yq kubectl
 WORKDIR /
-COPY bin/$COMPONENT.$TARGETOS-fips-$TARGETARCH /<component>
+COPY bin/$COMPONENT.$TARGETOS-$TARGETARCH /<component>
 # Copy ocm binary from downloader stage (adjust path if needed)
 COPY --from=downloader /tmp/ocm /usr/local/bin/ocm
 USER 65532:65532
