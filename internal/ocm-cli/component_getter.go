@@ -206,8 +206,8 @@ func (g *ComponentGetter) DownloadDirectoryResource(ctx context.Context, cv *Com
 
 func downloadDirectoryResource(ctx context.Context, componentLocation string, resourceName string, downloadDir string, ocmConfig string) error {
 	return Execute(ctx,
-		[]string{"download", "resources", componentLocation, resourceName},
-		[]string{"--downloader", "ocm/dirtree", "--outfile", downloadDir},
+		[]string{"download", "resources", componentLocation},
+		[]string{"--identity", "name=" + resourceName, flagOutput, downloadDir},
 		ocmConfig,
 	)
 }

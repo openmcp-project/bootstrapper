@@ -1,21 +1,25 @@
 package ocm_cli
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"sync"
 
-	yaml2 "k8s.io/apimachinery/pkg/util/yaml"
+	"github.com/Masterminds/semver/v3"
 	"sigs.k8s.io/yaml"
 )
 
 const (
 	// NoOcmConfig is a constant to indicate that no OCM configuration file is being provided.
 	NoOcmConfig = ""
+
+	// flagOutput is the OCM CLI flag selecting the output format or output path.
+	flagOutput = "--output"
 )
 
 // Execute runs the specified OCM command with the provided arguments and configuration.
@@ -70,17 +74,16 @@ func ExecuteOutput(ctx context.Context, commands []string, args []string, ocmCon
 	ocmArgs = append(ocmArgs, commands...)
 	ocmArgs = append(ocmArgs, args...)
 
+	// Only stdout carries the command result; the OCM CLI v2 writes its logs to stderr.
+	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, "ocm", ocmArgs...)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("error executing ocm command: %w, %q", err, out)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("error executing ocm command: %w, %q", err, stderr.String())
 	}
 
-	if cmd.ProcessState.ExitCode() != 0 {
-		return nil, fmt.Errorf("ocm command exited with code %d: %q", cmd.ProcessState.ExitCode(), out)
-	}
-
-	return out, nil
+	return stdout.Bytes(), nil
 }
 
 // ComponentVersion represents a version of an OCM component.
@@ -136,11 +139,6 @@ type Access struct {
 	MediaType *string `json:"mediaType"`
 }
 
-type ComponentListEntry struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-}
-
 var (
 	OCIImageResourceType = "ociImage"
 )
@@ -177,29 +175,34 @@ func (cv *ComponentVersion) GetComponentReferences(name string) []ComponentRefer
 	return references
 }
 
+// ListComponentVersions lists all versions of the component of cv in its repository, sorted ascending by semver.
 func (cv *ComponentVersion) ListComponentVersions(ctx context.Context, ocmConfig string) ([]string, error) {
-
-	out, err := ExecuteOutput(ctx, []string{"list", "componentversion", cv.Repository + "//" + cv.Component.Name}, []string{"--output", "yaml"}, ocmConfig)
+	out, err := ExecuteOutput(ctx, []string{"get", "componentversions", cv.Repository + "//" + cv.Component.Name}, []string{flagOutput, "yaml"}, ocmConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	cvList := make([]string, 0)
-	decoder := yaml2.NewYAMLOrJSONDecoder(strings.NewReader(string(out)), 1024)
-	for {
-		var entry ComponentListEntry
-		err = decoder.Decode(&entry)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, fmt.Errorf("error decoding component version list: %w", err)
-		}
-		cvList = append(cvList, entry.Version)
+	var cvs []ComponentVersion
+	if err = yaml.Unmarshal(out, &cvs); err != nil {
+		return nil, fmt.Errorf("error decoding component version list: %w", err)
 	}
 
-	return cvList, nil
+	versions := make([]*semver.Version, 0, len(cvs))
+	for _, entry := range cvs {
+		v, err := semver.NewVersion(entry.Component.Version)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing component version %q: %w", entry.Component.Version, err)
+		}
+		versions = append(versions, v)
+	}
+	// The OCM CLI v2 lists versions in descending order; callers expect ascending order.
+	slices.SortFunc(versions, func(a, b *semver.Version) int { return a.Compare(b) })
 
+	cvList := make([]string, 0, len(versions))
+	for _, v := range versions {
+		cvList = append(cvList, v.Original())
+	}
+	return cvList, nil
 }
 
 // cvCache memoizes GetComponentVersion results for the lifetime of the process.
@@ -219,16 +222,20 @@ func GetComponentVersion(ctx context.Context, componentReference string, ocmConf
 		return &cv, nil
 	}
 
-	out, err := ExecuteOutput(ctx, []string{"get", "componentversion", componentReference}, []string{"--output", "yaml"}, ocmConfig)
+	out, err := ExecuteOutput(ctx, []string{"get", "componentversion", componentReference}, []string{flagOutput, "yaml"}, ocmConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	var cv ComponentVersion
-	err = yaml.Unmarshal(out, &cv)
-	if err != nil {
+	// The OCM CLI v2 always prints a list, even for a single version-pinned reference.
+	var cvs []ComponentVersion
+	if err = yaml.Unmarshal(out, &cvs); err != nil {
 		return nil, fmt.Errorf("error unmarshalling component version: %w", err)
 	}
+	if len(cvs) != 1 {
+		return nil, fmt.Errorf("expected exactly one component version for %s, got %d", componentReference, len(cvs))
+	}
+	cv := cvs[0]
 
 	cv.Repository = strings.SplitN(componentReference, "//", 2)[0]
 

@@ -82,6 +82,7 @@ func TestGetComponentVersion(t *testing.T) {
 	testutil.DownloadOCMAndAddToPath(t)
 
 	ctfIn := testutil.BuildComponent("./testdata/01/component-constructor.yaml", t)
+	cvRef := ctfIn + "//github.com/openmcp-project/bootstrapper/test:v0.0.1"
 
 	testCases := []struct {
 		desc          string
@@ -92,7 +93,7 @@ func TestGetComponentVersion(t *testing.T) {
 	}{
 		{
 			desc:          "get component version",
-			componentRef:  ctfIn,
+			componentRef:  cvRef,
 			ocmConfig:     ocmcli.NoOcmConfig,
 			expectedError: nil,
 			verify: func(cv *ocmcli.ComponentVersion) {
@@ -117,9 +118,9 @@ func TestGetComponentVersion(t *testing.T) {
 					Version: "v0.0.1",
 					Type:    "blob",
 					Access: ocmcli.Access{
-						Type:           "localBlob",
+						Type:           "LocalBlob/v1",
 						LocalReference: cv.Component.Resources[0].Access.LocalReference,
-						MediaType:      ptr.To("application/octet-stream"),
+						MediaType:      ptr.To("text/plain; charset=utf-8"),
 					},
 				})
 
@@ -139,13 +140,13 @@ func TestGetComponentVersion(t *testing.T) {
 		},
 		{
 			desc:          "get component version with ocm config",
-			componentRef:  ctfIn,
+			componentRef:  cvRef,
 			ocmConfig:     "./testdata/01/ocm-config.yaml",
 			expectedError: nil,
 		},
 		{
 			desc:          "get component version with unsupported ocm config",
-			componentRef:  ctfIn,
+			componentRef:  cvRef,
 			ocmConfig:     "./testdata/01/unsupported-ocm-config.yaml",
 			expectedError: expectError,
 		},
@@ -172,4 +173,19 @@ func TestGetComponentVersion(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestListComponentVersions(t *testing.T) {
+	testutil.DownloadOCMAndAddToPath(t)
+
+	ctf := testutil.BuildComponent("../deployment-repo/testdata/01/component-constructor.yaml", t)
+
+	cv := ocmcli.ComponentVersion{
+		Repository: ctf,
+		Component:  ocmcli.Component{Name: "github.com/openmcp-project/openmcp/releasechannel/crossplane"},
+	}
+
+	versions, err := cv.ListComponentVersions(t.Context(), ocmcli.NoOcmConfig)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"v0.0.1", "v0.0.2"}, versions)
 }

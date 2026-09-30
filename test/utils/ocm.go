@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -34,21 +35,8 @@ func DownloadOCMAndAddToPath(t *testing.T) {
 	if _, err := os.Stat(ocmPath); os.IsNotExist(err) {
 		t.Log("Downloading OCM as it is not present in the cache directory, starting download...")
 
-		downloadURL := "https://github.com/open-component-model/ocm/releases/download/v" +
-			ocmVersion + "/ocm-" + ocmVersion + "-" + runtime.GOOS + "-" + runtime.GOARCH + ".tar.gz"
-
-		tempDir := t.TempDir()
-		archivePath := filepath.Join(tempDir, "ocm.tar.gz")
-		out, err := os.Create(archivePath)
-		if err != nil {
-			t.Fatalf("failed to create file: %v", err)
-		}
-		defer func(out *os.File) {
-			err := out.Close()
-			if err != nil {
-				t.Fatalf("failed to close file: %v", err)
-			}
-		}(out)
+		downloadURL := "https://github.com/open-component-model/open-component-model/releases/download/v" +
+			ocmVersion + "/ocm-" + runtime.GOOS + "-" + runtime.GOARCH
 
 		resp, err := http.Get(downloadURL)
 		if err != nil {
@@ -60,46 +48,46 @@ func DownloadOCMAndAddToPath(t *testing.T) {
 				t.Fatalf("failed to close response body: %v", err)
 			}
 		}(resp.Body)
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("failed to download ocm from %s: HTTP %d", downloadURL, resp.StatusCode)
+		}
 
-		_, err = io.Copy(out, resp.Body)
+		// Write to a unique temporary file and rename it atomically: test packages run in parallel,
+		// and a shared path would let one package rewrite a binary another package is executing.
+		out, err := os.CreateTemp(cacheDir, ocmBinaryName+".download-*")
 		if err != nil {
+			t.Fatalf("failed to create file: %v", err)
+		}
+		tmpPath := out.Name()
+		defer func() { _ = os.Remove(tmpPath) }()
+		if _, err = io.Copy(out, resp.Body); err != nil {
+			_ = out.Close()
 			t.Fatalf("failed to save ocm: %v", err)
 		}
-
-		// Extract the tar.gz
-		cmd := exec.Command("tar", "-xzf", archivePath, "-C", tempDir)
-		if err := cmd.Run(); err != nil {
-			t.Fatalf("failed to extract ocm: %v", err)
+		if err := out.Close(); err != nil {
+			t.Fatalf("failed to close file: %v", err)
 		}
-
-		// Move the ocm binary to the cache dir
-		binPath := filepath.Join(tempDir, "ocm")
-		if _, err := os.Stat(binPath); err != nil {
-			t.Fatalf("ocm binary not found after extraction: %v", err)
-		}
-		if err := os.Rename(binPath, ocmPath); err != nil {
+		if err := os.Rename(tmpPath, ocmPath); err != nil {
 			t.Fatalf("failed to move ocm binary to cache: %v", err)
 		}
 		if err := os.Chmod(ocmPath, 0o755); err != nil {
 			t.Fatalf("failed to chmod ocm binary: %v", err)
 		}
-
-		// if symlink already exists, remove it
-		symlinkPath := filepath.Join(cacheDir, "ocm")
-		if _, err := os.Lstat(symlinkPath); err == nil {
-			if err := os.Remove(symlinkPath); err != nil {
-				t.Fatalf("failed to remove existing symlink: %v", err)
-			}
-		} else if !os.IsNotExist(err) {
-			t.Fatalf("failed to check existing symlink: %v", err)
-		}
-
-		// create symlink to the ocm binary
-		if err := os.Symlink(ocmPath, symlinkPath); err != nil {
-			t.Fatalf("failed to create symlink for ocm binary: %v", err)
-		}
 	} else {
 		t.Log("OCM binary already exists in the cache directory, skipping download.")
+	}
+
+	// Point the "ocm" symlink at the pinned binary. Create it under a unique name and rename it over the
+	// existing link, so parallel test packages never observe a missing link and a stale link from another
+	// OCM version is always replaced.
+	symlinkPath := filepath.Join(cacheDir, "ocm")
+	tmpLink := filepath.Join(cacheDir, fmt.Sprintf("ocm.link-%d", os.Getpid()))
+	_ = os.Remove(tmpLink)
+	if err := os.Symlink(ocmPath, tmpLink); err != nil {
+		t.Fatalf("failed to create symlink for ocm binary: %v", err)
+	}
+	if err := os.Rename(tmpLink, symlinkPath); err != nil {
+		t.Fatalf("failed to replace symlink for ocm binary: %v", err)
 	}
 
 	// Prepend the cache dir to PATH
@@ -114,14 +102,12 @@ func BuildComponent(componentConstructorLocation string, t *testing.T) string {
 	tempDir := t.TempDir()
 	ctfDir := filepath.Join(tempDir, "ctf")
 
-	cmd := exec.Command("ocm", []string{
-		"add",
-		"componentversions",
-		"--create",
-		"--skip-digest-generation",
-		"--file",
-		ctfDir,
-		componentConstructorLocation}...)
+	cmd := exec.Command("ocm",
+		"add", "componentversions",
+		"--repository", "ctf::"+ctfDir,
+		"--constructor", componentConstructorLocation,
+		"--skip-reference-digest-processing",
+	)
 
 	out, err := cmd.CombinedOutput()
 	t.Log("OCM Output:", string(out))
