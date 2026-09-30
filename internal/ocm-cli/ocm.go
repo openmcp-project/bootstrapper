@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 
 	yaml2 "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/yaml"
@@ -201,8 +202,23 @@ func (cv *ComponentVersion) ListComponentVersions(ctx context.Context, ocmConfig
 
 }
 
+// cvCache memoizes GetComponentVersion results for the lifetime of the process.
+// Templating resolves the same release-channel / service / provider components
+// repeatedly (once per extra-manifest template, across every environment), and
+// each miss shells out to `ocm get componentversion` + a remote registry round-trip.
+// Keyed by ocmConfig + componentReference; stores values so callers get a fresh
+// pointer copy and cannot mutate shared cache state. Errors are not cached.
+// ponytail: no singleflight — templating is serial, a cold-start double-exec is harmless.
+var cvCache sync.Map
+
 // GetComponentVersion retrieves a component version by its reference using the OCM CLI.
 func GetComponentVersion(ctx context.Context, componentReference string, ocmConfig string) (*ComponentVersion, error) {
+	cacheKey := ocmConfig + "\x00" + componentReference
+	if cached, ok := cvCache.Load(cacheKey); ok {
+		cv := cached.(ComponentVersion) // copy out — caller gets its own pointer
+		return &cv, nil
+	}
+
 	out, err := ExecuteOutput(ctx, []string{"get", "componentversion", componentReference}, []string{"--output", "yaml"}, ocmConfig)
 	if err != nil {
 		return nil, err
@@ -215,6 +231,8 @@ func GetComponentVersion(ctx context.Context, componentReference string, ocmConf
 	}
 
 	cv.Repository = strings.SplitN(componentReference, "//", 2)[0]
+
+	cvCache.Store(cacheKey, cv)
 
 	return &cv, nil
 }
