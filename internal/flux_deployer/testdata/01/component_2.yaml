@@ -1,8 +1,7 @@
 component:
   name: github.com/openmcp-project/openmcp
   version: v2.0.0
-  provider:
-    name: openmcp-project
+  provider: openmcp-project
 
   resources:
     - name: fluxcd-source-controller

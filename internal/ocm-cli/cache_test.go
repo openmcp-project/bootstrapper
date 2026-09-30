@@ -49,8 +49,8 @@ func TestGetComponentVersionSkipsExecOnHit(t *testing.T) {
 	dir := t.TempDir()
 	countFile := filepath.Join(dir, "count")
 
-	// Fake `ocm`: append a line per call, print a minimal valid componentversion.
-	script := "#!/bin/sh\necho x >> " + countFile + "\ncat <<'YAML'\ncomponent:\n  name: fake-component\n  version: v0.0.1\nYAML\n"
+	// Fake `ocm`: append a line per call, print a minimal valid componentversion list (OCM CLI v2 output shape).
+	script := "#!/bin/sh\necho x >> " + countFile + "\ncat <<'YAML'\n- component:\n    name: fake-component\n    version: v0.0.1\nYAML\n"
 	if err := os.WriteFile(filepath.Join(dir, "ocm"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}

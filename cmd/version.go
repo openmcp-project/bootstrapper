@@ -31,7 +31,7 @@ Git commit, build date, Go version, and platform information.`,
 		printVersion(ownVersion, "openMCP Bootstrapper CLI")
 
 		var ocmVersion apimachineryversion.Info
-		out, err := ocmcli.ExecuteOutput(cmd.Context(), []string{"version"}, nil, ocmcli.NoOcmConfig)
+		out, err := ocmcli.ExecuteOutput(cmd.Context(), []string{"version"}, []string{"--output", "legacyjson"}, ocmcli.NoOcmConfig)
 		if err != nil {
 			fmt.Printf("Error retrieving ocm-cli version: %ownVersion\n", err)
 			return

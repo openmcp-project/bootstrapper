@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/openmcp-project/bootstrapper/cmd"
+	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
 	testutil "github.com/openmcp-project/bootstrapper/test/utils"
 )
 
@@ -18,6 +19,7 @@ func TestOcmTransfer(t *testing.T) {
 
 	ctfIn := testutil.BuildComponent("./testdata/component-constructor.yaml", t)
 	ctfOut := filepath.Join(t.TempDir(), "ctfOut")
+	const componentRef = "//github.com/openmcp-project/bootstrapper/test:v0.0.1"
 
 	testCases := []struct {
 		desc          string
@@ -36,7 +38,7 @@ func TestOcmTransfer(t *testing.T) {
 		},
 		{
 			desc:          "Two arguments specified",
-			arguments:     []string{ctfIn, ctfOut},
+			arguments:     []string{ctfIn + componentRef, ctfOut},
 			expectedError: nil,
 		},
 	}
@@ -55,6 +57,8 @@ func TestOcmTransfer(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
+				_, err = ocmcli.GetComponentVersion(t.Context(), ctfOut+componentRef, ocmcli.NoOcmConfig)
+				assert.NoError(t, err, "transferred component version must be readable from the target")
 			}
 		})
 	}

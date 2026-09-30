@@ -19,3 +19,13 @@ components:
         input:
           type: file
           path: ./test-resource.yaml
+
+  - name: github.com/openmcp-project/bootstrapper-dependency-a
+    version: v0.2.0
+    provider:
+      name: openmcp-project
+
+  - name: github.com/openmcp-project/bootstrapper-dependency-b
+    version: v0.3.0
+    provider:
+      name: openmcp-project

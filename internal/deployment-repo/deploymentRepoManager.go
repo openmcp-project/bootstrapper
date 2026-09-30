@@ -217,13 +217,17 @@ func (m *DeploymentRepoManager) ApplyTemplates(ctx context.Context) error {
 	templateInput := make(map[string]interface{})
 
 	openMCPOperatorImageResources := m.openMCPOperatorCV.GetResourcesByType(ocmcli.OCIImageResourceType)
-	if len(openMCPOperatorImageResources) == 0 || openMCPOperatorImageResources[0].Access.ImageReference == nil {
+	if len(openMCPOperatorImageResources) == 0 {
 		return fmt.Errorf("no image resource found for openmcp-operator component version %s:%s", m.openMCPOperatorCV.Component.Name, m.openMCPOperatorCV.Component.Version)
 	}
-
-	imageName, imageTag, imageDigest, err := util.ParseImageVersionAndTag(*openMCPOperatorImageResources[0].Access.ImageReference)
+	imageRef, err := ocmcli.ImageReference(&openMCPOperatorImageResources[0])
 	if err != nil {
-		return fmt.Errorf("failed to parse image reference %s: %w", *openMCPOperatorImageResources[0].Access.ImageReference, err)
+		return fmt.Errorf("failed to get image reference of openmcp-operator component version %s:%s: %w", m.openMCPOperatorCV.Component.Name, m.openMCPOperatorCV.Component.Version, err)
+	}
+
+	imageName, imageTag, imageDigest, err := util.ParseImageVersionAndTag(imageRef)
+	if err != nil {
+		return fmt.Errorf("failed to parse image reference %s: %w", imageRef, err)
 	}
 
 	if len(m.Config.ImagePullSecrets) > 0 {
@@ -332,9 +336,13 @@ func applyFluxCDTemplateInput(templateInput map[string]interface{}, fluxcdCV *oc
 	if err != nil {
 		return fmt.Errorf("failed to get fluxcd resource %s: %w", fluxResource, err)
 	}
-	imageName, imageTag, imageDigest, err := util.ParseImageVersionAndTag(*fluxSourceControllerImageResource.Access.ImageReference)
+	imageRef, err := ocmcli.ImageReference(fluxSourceControllerImageResource)
 	if err != nil {
-		return fmt.Errorf("failed to parse image reference %s: %w", *fluxSourceControllerImageResource.Access.ImageReference, err)
+		return fmt.Errorf("failed to get image reference of fluxcd resource %s: %w", fluxResource, err)
+	}
+	imageName, imageTag, imageDigest, err := util.ParseImageVersionAndTag(imageRef)
+	if err != nil {
+		return fmt.Errorf("failed to parse image reference %s: %w", imageRef, err)
 	}
 	templateInput["images"].(map[string]interface{})[key] = map[string]interface{}{
 		"version": imageTag,
