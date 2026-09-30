@@ -12,6 +12,8 @@ import (
 	testutils "github.com/openmcp-project/bootstrapper/test/utils"
 )
 
+const testBranchName = "test"
+
 func Test_Repo(t *testing.T) {
 	originDir := t.TempDir()
 	targetDir := t.TempDir()
@@ -38,7 +40,7 @@ func Test_Repo(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, repoWorkTree)
 
-	err = deploymentrepo.CheckoutAndCreateBranchIfNotExists(repo, "test", gitConfig)
+	err = deploymentrepo.CheckoutAndCreateBranchIfNotExists(repo, testBranchName, gitConfig)
 	assert.NoError(t, err)
 
 	testFilePath := filepath.Join(targetDir, "test.txt")
@@ -48,7 +50,7 @@ func Test_Repo(t *testing.T) {
 	err = deploymentrepo.CommitChanges(repo, "Add test.txt", "Test User", "noreply@test")
 	assert.NoError(t, err)
 
-	err = deploymentrepo.PushRepo(repo, "test", gitConfig)
+	err = deploymentrepo.PushRepo(repo, testBranchName, gitConfig)
 	assert.NoError(t, err)
 
 	hasTestBranch := false
@@ -60,7 +62,7 @@ func Test_Repo(t *testing.T) {
 			break
 		}
 		t.Logf("Branch: %s", branch.Name().String())
-		if branch.Name().Short() == "test" {
+		if branch.Name().Short() == testBranchName {
 			hasTestBranch = true
 			break
 		}

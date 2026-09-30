@@ -1,16 +1,16 @@
 # Stage 1: Download and extract ocm binary
-FROM alpine@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11 AS downloader
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS downloader
 ARG TARGETOS
 ARG TARGETARCH
 RUN apk add --no-cache curl tar
 WORKDIR /tmp
 # renovate: datasource=github-releases depName=ocm packageName=open-component-model/ocm
-ARG OCM_VERSION=0.40.0
+ARG OCM_VERSION=0.51.0
 RUN curl -L -o ocm.tar.gz https://github.com/open-component-model/ocm/releases/download/v$OCM_VERSION/ocm-$OCM_VERSION-$TARGETOS-$TARGETARCH.tar.gz \
     && tar -xzf ocm.tar.gz
 
 
-FROM alpine:3.23@sha256:5b10f432ef3da1b8d4c7eb6c487f2f5a8f096bc91145e68878dd4a5019afde11 AS base
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS base
 ARG TARGETOS
 ARG TARGETARCH
 ARG COMPONENT

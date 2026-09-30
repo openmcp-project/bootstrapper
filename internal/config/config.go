@@ -30,6 +30,9 @@ type DeploymentRepository struct {
 	RepoURL    string `json:"url"`
 	PullBranch string `json:"pullBranch"`
 	PushBranch string `json:"pushBranch"`
+	// Provider sets the Flux GitRepository spec.provider (e.g. "github" for GitHub App auth).
+	// Empty preserves the default secretRef-based auth.
+	Provider string `json:"provider"`
 }
 
 type TargetCluster struct {
@@ -84,6 +87,10 @@ func (c *BootstrapperConfig) SetDefaults() {
 
 	if len(c.DeploymentRepository.PullBranch) == 0 {
 		c.DeploymentRepository.PullBranch = c.DeploymentRepository.PushBranch
+	}
+
+	if len(c.DeploymentRepository.Provider) == 0 {
+		c.DeploymentRepository.Provider = "generic"
 	}
 }
 

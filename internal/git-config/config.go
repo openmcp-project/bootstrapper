@@ -15,6 +15,8 @@ import (
 // Config represents the configuration for git operations.
 type Config struct {
 	Authentication Authentication `json:"auth,omitempty"`
+	// TLSCACert is the base64 encoded custom CA certificate for TLS verification.
+	TLSCACert string `json:"tlsCACert,omitempty"`
 }
 
 // Authentication holds the authentication methods for git operations.
@@ -58,6 +60,18 @@ func (s *SSHPrivateKey) DecodePrivateKey() ([]byte, error) {
 		return nil, fmt.Errorf("failed to decode SSH private key: %w", err)
 	}
 	return privateKeyDecoded, nil
+}
+
+// DecodeTLSCACert decodes the base64 encoded TLS CA certificate.
+func (c *Config) DecodeTLSCACert() ([]byte, error) {
+	if c.TLSCACert == "" {
+		return nil, nil
+	}
+	caCertDecoded, err := base64.StdEncoding.DecodeString(c.TLSCACert)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode TLS CA certificate: %w", err)
+	}
+	return caCertDecoded, nil
 }
 
 // ParseConfig reads a YAML configuration file and returns a Config object.
@@ -118,6 +132,16 @@ func (c *Config) ConfigureCloneOptions(options *git.CloneOptions) error {
 		return err
 	}
 	options.Auth = auth
+
+	// Add CA bundle if provided
+	if c.TLSCACert != "" {
+		caBundle, err := c.DecodeTLSCACert()
+		if err != nil {
+			return fmt.Errorf("failed to decode CA bundle: %w", err)
+		}
+		options.CABundle = caBundle
+	}
+
 	return nil
 }
 
@@ -128,6 +152,16 @@ func (c *Config) ConfigurePushOptions(options *git.PushOptions) error {
 		return err
 	}
 	options.Auth = auth
+
+	// Add CA bundle if provided
+	if c.TLSCACert != "" {
+		caBundle, err := c.DecodeTLSCACert()
+		if err != nil {
+			return fmt.Errorf("failed to decode CA bundle: %w", err)
+		}
+		options.CABundle = caBundle
+	}
+
 	return nil
 }
 

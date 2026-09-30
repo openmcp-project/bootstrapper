@@ -12,6 +12,13 @@ import (
 	testutil "github.com/openmcp-project/bootstrapper/test/utils"
 )
 
+const (
+	ocmCmdGet              = "get"
+	ocmCmdComponentVersion = "componentversion"
+	ocmArgOutput           = "--output"
+	ocmArgOutputYAML       = "yaml"
+)
+
 func TestExecute(t *testing.T) {
 	expectError := errors.New("expected error")
 
@@ -28,30 +35,30 @@ func TestExecute(t *testing.T) {
 	}{
 		{
 			desc:          "get componentversion",
-			commands:      []string{"get", "componentversion"},
-			arguments:     []string{"--output", "yaml", ctfIn},
+			commands:      []string{ocmCmdGet, ocmCmdComponentVersion},
+			arguments:     []string{ocmArgOutput, ocmArgOutputYAML, ctfIn},
 			ocmConfig:     ocmcli.NoOcmConfig,
 			expectedError: nil,
 		},
 		{
 			desc:          "get componentversion with invalid argument",
-			commands:      []string{"get", "componentversion"},
-			arguments:     []string{"--output", "yaml", "invalid-argument"},
+			commands:      []string{ocmCmdGet, ocmCmdComponentVersion},
+			arguments:     []string{ocmArgOutput, ocmArgOutputYAML, "invalid-argument"},
 			ocmConfig:     ocmcli.NoOcmConfig,
 			expectedError: expectError,
 		},
 		{
 			desc:          "get componentversion with ocm config",
-			commands:      []string{"get", "componentversion"},
-			arguments:     []string{"--output", "yaml", ctfIn},
+			commands:      []string{ocmCmdGet, ocmCmdComponentVersion},
+			arguments:     []string{ocmArgOutput, ocmArgOutputYAML, ctfIn},
 			ocmConfig:     "./testdata/01/ocm-config.yaml",
 			expectedError: nil,
 		},
 
 		{
 			desc:          "get componentversion with unsupported ocm config",
-			commands:      []string{"get", "componentversion"},
-			arguments:     []string{"--output", "yaml", ctfIn},
+			commands:      []string{ocmCmdGet, ocmCmdComponentVersion},
+			arguments:     []string{ocmArgOutput, ocmArgOutputYAML, ctfIn},
 			ocmConfig:     "./testdata/01/unsupported-ocm-config.yaml",
 			expectedError: expectError,
 		},

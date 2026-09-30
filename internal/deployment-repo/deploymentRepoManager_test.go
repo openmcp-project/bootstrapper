@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	incomingBranch = "incoming"
-	outgoingBranch = "outgoing"
+	incomingBranch   = "incoming"
+	outgoingBranch   = "outgoing"
+	testProviderName = "test"
 )
 
 func TestDeploymentRepoManager(t *testing.T) {
@@ -57,6 +58,7 @@ func TestDeploymentRepoManager(t *testing.T) {
 			RepoURL:    originDir,
 			PushBranch: incomingBranch,
 			PullBranch: outgoingBranch,
+			Provider:   "github",
 		},
 		OpenMCPOperator: config.OpenMCPOperator{
 			Config: json.RawMessage(`{"someKey": "someValue"}`),
@@ -64,18 +66,18 @@ func TestDeploymentRepoManager(t *testing.T) {
 		Providers: config.Providers{
 			ClusterProviders: []config.Provider{
 				{
-					Name:   "test",
+					Name:   testProviderName,
 					Config: json.RawMessage(`{"verbosity": "info"}`),
 				},
 			},
 			ServiceProviders: []config.Provider{
 				{
-					Name: "test",
+					Name: testProviderName,
 				},
 			},
 			PlatformServices: []config.Provider{
 				{
-					Name: "test",
+					Name: testProviderName,
 				},
 			},
 		},

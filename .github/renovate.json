@@ -1,46 +1,14 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "git-submodules": {
-    "enabled": true
-  },
-  "minimumReleaseAge": "0 days",
+  "extends": [
+    "github>openmcp-project/.github:renovate-config"
+  ],
   "ignorePaths": [
     "**/internal/deployment-repo/testdata/**"
   ],
-  "extends": [
-    "config:recommended",
-    "config:best-practices",
-    "security:openssf-scorecard",
-    "helpers:pinGitHubActionDigests",
-    ":rebaseStalePrs"
-  ],
-  "postUpdateOptions": [
-    "gomodTidy"
-  ],
   "packageRules": [
     {
-      "matchManagers": [
-        "gomod"
-      ],
-      "matchDepNames": [
-        "go"
-      ],
-      "matchDepTypes": [
-        "golang"
-      ],
-      "rangeStrategy": "bump"
-    },
-    {
-      "matchPackageNames": [
-        "github.com/openmcp-project/*"
-      ],
-      "description": "Update all components from openmcp-project immediately",
-      "rebaseWhen": "auto",
-      "minimumReleaseAge": "0 days",
-      "enabled": true
-    },
-    {
-      "description": "Combine fluxcd updates in a single PR",
+      "description": "Group fluxcd updates in a single PR",
       "matchDatasources": [
         "go"
       ],

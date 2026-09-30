@@ -12,6 +12,8 @@ import (
 // - "nginx" -> imageName: "nginx", tag: "latest", digest: ""
 // - "nginx@sha256:abcdef..." -> imageName: "nginx", tag: "", digest: "sha256:abcdef..."
 // - "nginx:1.19.0@sha256:abcdef..." -> imageName: "nginx", tag: "1.19.0", digest: "sha256:abcdef..."
+const latestTag = "latest"
+
 func ParseImageVersionAndTag(image string) (imageName string, tag string, digest string, err error) {
 	if image == "" {
 		return "", "", "", fmt.Errorf("image string cannot be empty")
@@ -43,7 +45,7 @@ func ParseImageVersionAndTag(image string) (imageName string, tag string, digest
 	// In this case, default to "latest" tag
 	if colonIndex == -1 {
 		imageName = tagPart
-		return imageName, "latest", digest, nil
+		return imageName, latestTag, digest, nil
 	}
 
 	// Extract image name (everything before the last colon)

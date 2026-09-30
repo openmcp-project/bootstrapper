@@ -20,6 +20,7 @@ func NewTemplateInputFromConfig(c *config.BootstrapperConfig) TemplateInput {
 			"repoUrl":    c.DeploymentRepository.RepoURL,
 			"pushBranch": c.DeploymentRepository.PushBranch,
 			"pullBranch": c.DeploymentRepository.PullBranch,
+			"provider":   c.DeploymentRepository.Provider,
 		},
 
 		"imagePullSecrets": wrapImagePullSecrets(c.ImagePullSecrets),

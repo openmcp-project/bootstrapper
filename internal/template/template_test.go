@@ -9,6 +9,8 @@ import (
 	"github.com/openmcp-project/bootstrapper/internal/template"
 )
 
+const testInputKey = "test"
+
 func TestTemplateExecution(t *testing.T) {
 	testCases := []struct {
 		desc          string
@@ -23,7 +25,7 @@ func TestTemplateExecution(t *testing.T) {
 			template: "{{ .values.test }}",
 			input: map[string]interface{}{
 				"values": map[string]interface{}{
-					"test": "foo",
+					testInputKey: "foo",
 				},
 			},
 			funcMaps: nil,
@@ -34,7 +36,7 @@ func TestTemplateExecution(t *testing.T) {
 			template: `{{ myFunc .values.test }}`,
 			input: map[string]interface{}{
 				"values": map[string]interface{}{
-					"test": "bar",
+					testInputKey: "bar",
 				},
 			},
 			funcMaps: []gotmpl.FuncMap{
@@ -50,7 +52,7 @@ func TestTemplateExecution(t *testing.T) {
 			desc:     "template with error",
 			template: "{{ .missingKey }}",
 			input: map[string]interface{}{
-				"test": "value",
+				testInputKey: testInputValue,
 			},
 			funcMaps:      nil,
 			expectedError: "template: test:1:3: executing \"test\" at <.missingKey>: map has no entry for key \"missingKey\"\ntemplate source:\n1:    {{ .missingKey }}\n         ˆ≈≈≈≈≈≈≈\n\ntemplate input:\n\ttest: \"value\"\n",
@@ -63,7 +65,7 @@ func TestTemplateExecution(t *testing.T) {
 			for _, fm := range tc.funcMaps {
 				tmplExec.WithFuncMap(fm)
 			}
-			result, err := tmplExec.Execute("test", tc.template, tc.input)
+			result, err := tmplExec.Execute(testInputKey, tc.template, tc.input)
 			if err != nil {
 				if tc.expectedError == "" {
 					t.Fatalf("unexpected error: %v", err)

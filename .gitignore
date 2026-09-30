@@ -35,3 +35,6 @@ components/
 
 *.tmp
 .task/
+
+# macOS
+.DS_Store

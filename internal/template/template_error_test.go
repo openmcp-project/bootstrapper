@@ -11,6 +11,8 @@ import (
 	"github.com/openmcp-project/bootstrapper/internal/template"
 )
 
+const testInputValue = "value"
+
 func TestCreateSourceSnippet(t *testing.T) {
 	lines := make([]string, 0, 5)
 	for i := 0; i < 50; i++ {
@@ -39,7 +41,7 @@ func TestTemplateError(t *testing.T) {
 			desc:                   "invalid function error",
 			failType:               FailDuringParse,
 			template:               "{{ invalidFunction() }}",
-			input:                  map[string]interface{}{"existing": "value"},
+			input:                  map[string]interface{}{"existing": testInputValue},
 			templateInputFormatter: template.NewTemplateInputFormatter(true),
 			expectedError:          "template: test:1: function \"invalidFunction\" not defined\ntemplate source:\n1:    {{ invalidFunction() }}\n      ˆ≈≈≈≈≈≈≈\n\ntemplate input:\n\texisting: \"value\"\n",
 		},
@@ -47,7 +49,7 @@ func TestTemplateError(t *testing.T) {
 			desc:                   "missing key error",
 			failType:               FailDuringExecute,
 			template:               "{{ .missingKey }}",
-			input:                  map[string]interface{}{"existing": "value"},
+			input:                  map[string]interface{}{"existing": testInputValue},
 			templateInputFormatter: template.NewTemplateInputFormatter(true),
 			expectedError:          "template: test:1:3: executing \"test\" at <.missingKey>: map has no entry for key \"missingKey\"\ntemplate source:\n1:    {{ .missingKey }}\n         ˆ≈≈≈≈≈≈≈\n\ntemplate input:\n\texisting: \"value\"\n",
 		},
