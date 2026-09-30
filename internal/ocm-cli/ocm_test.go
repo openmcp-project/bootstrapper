@@ -5,8 +5,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/util/json"
-	"k8s.io/utils/ptr"
+	descriptor "ocm.software/open-component-model/bindings/go/descriptor/v2"
+	ocmruntime "ocm.software/open-component-model/bindings/go/runtime"
 
 	ocmcli "github.com/openmcp-project/bootstrapper/internal/ocm-cli"
 	testutil "github.com/openmcp-project/bootstrapper/test/utils"
@@ -99,30 +101,25 @@ func TestGetComponentVersion(t *testing.T) {
 			verify: func(cv *ocmcli.ComponentVersion) {
 				assert.Equal(t, cv.Component.Name, "github.com/openmcp-project/bootstrapper/test")
 				assert.Equal(t, cv.Component.Version, "v0.0.1")
-				assert.Len(t, cv.Component.ComponentReferences, 2)
-				assert.Len(t, cv.Component.Resources, 1)
+				assert.Len(t, cv.Component.References, 2)
+				require.Len(t, cv.Component.Resources, 1)
 
-				assert.Contains(t, cv.Component.ComponentReferences, ocmcli.ComponentReference{
-					Name:          "bootstrapper-dependency-a",
-					Version:       "v0.2.0",
-					ComponentName: "github.com/openmcp-project/bootstrapper-dependency-a",
-				})
-				assert.Contains(t, cv.Component.ComponentReferences, ocmcli.ComponentReference{
-					Name:          "bootstrapper-dependency-b",
-					Version:       "v0.3.0",
-					ComponentName: "github.com/openmcp-project/bootstrapper-dependency-b",
-				})
+				type ref struct{ name, component, version string }
+				refs := make([]ref, 0, len(cv.Component.References))
+				for _, r := range cv.Component.References {
+					refs = append(refs, ref{r.Name, r.Component, r.Version})
+				}
+				assert.Contains(t, refs, ref{"bootstrapper-dependency-a", "github.com/openmcp-project/bootstrapper-dependency-a", "v0.2.0"})
+				assert.Contains(t, refs, ref{"bootstrapper-dependency-b", "github.com/openmcp-project/bootstrapper-dependency-b", "v0.3.0"})
 
-				assert.Contains(t, cv.Component.Resources, ocmcli.Resource{
-					Name:    "test-resource",
-					Version: "v0.0.1",
-					Type:    "blob",
-					Access: ocmcli.Access{
-						Type:           "LocalBlob/v1",
-						LocalReference: cv.Component.Resources[0].Access.LocalReference,
-						MediaType:      ptr.To("text/plain; charset=utf-8"),
-					},
-				})
+				res := cv.Component.Resources[0]
+				assert.Equal(t, "test-resource", res.Name)
+				assert.Equal(t, "v0.0.1", res.Version)
+				assert.Equal(t, "blob", res.Type)
+				require.NotNil(t, res.Access)
+				assert.Equal(t, "LocalBlob/v1", res.Access.Type.String())
+				_, err := ocmcli.ImageReference(&res)
+				assert.Error(t, err, "a local blob has no OCI image reference")
 
 				cvMarshaled, err := json.Marshal(cv)
 				assert.NoError(t, err)
@@ -180,12 +177,58 @@ func TestListComponentVersions(t *testing.T) {
 
 	ctf := testutil.BuildComponent("../deployment-repo/testdata/01/component-constructor.yaml", t)
 
-	cv := ocmcli.ComponentVersion{
-		Repository: ctf,
-		Component:  ocmcli.Component{Name: "github.com/openmcp-project/openmcp/releasechannel/crossplane"},
-	}
+	cv := ocmcli.ComponentVersion{Repository: ctf}
+	cv.Component.Name = "github.com/openmcp-project/openmcp/releasechannel/crossplane"
 
 	versions, err := cv.ListComponentVersions(t.Context(), ocmcli.NoOcmConfig)
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"v0.0.1", "v0.0.2"}, versions)
+}
+
+func TestImageReference(t *testing.T) {
+	testCases := []struct {
+		desc        string
+		access      string
+		expected    string
+		expectError bool
+	}{
+		{
+			desc:     "legacy ociArtifact access",
+			access:   `{"type":"ociArtifact","imageReference":"ghcr.io/a/b:v1"}`,
+			expected: "ghcr.io/a/b:v1",
+		},
+		{
+			desc:     "versioned OCIImage access",
+			access:   `{"type":"OCIImage/v1","imageReference":"ghcr.io/a/b:v1"}`,
+			expected: "ghcr.io/a/b:v1",
+		},
+		{
+			desc:        "local blob access",
+			access:      `{"type":"LocalBlob/v1","localReference":"sha256:abc","mediaType":"application/x-tar"}`,
+			expectError: true,
+		},
+		{
+			desc:        "no access",
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			res := descriptor.Resource{}
+			res.Name = "r"
+			if tc.access != "" {
+				res.Access = &ocmruntime.Raw{}
+				require.NoError(t, json.Unmarshal([]byte(tc.access), res.Access))
+			}
+
+			imageRef, err := ocmcli.ImageReference(&res)
+			if tc.expectError {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expected, imageRef)
+		})
+	}
 }

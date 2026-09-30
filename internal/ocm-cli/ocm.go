@@ -11,6 +11,9 @@ import (
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
+	descriptor "ocm.software/open-component-model/bindings/go/descriptor/v2"
+	ociaccess "ocm.software/open-component-model/bindings/go/oci/spec/access"
+	ociaccessv1 "ocm.software/open-component-model/bindings/go/oci/spec/access/v1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -86,57 +89,10 @@ func ExecuteOutput(ctx context.Context, commands []string, args []string, ocmCon
 	return stdout.Bytes(), nil
 }
 
-// ComponentVersion represents a version of an OCM component.
+// ComponentVersion is an OCM component descriptor together with the repository it was read from.
 type ComponentVersion struct {
-	// Component is the OCM component associated with this version.
-	Component  Component `json:"component"`
-	Repository string    `json:"repository,omitempty"`
-}
-
-// Component represents an OCM component with its name, version, references to other components, and resources.
-type Component struct {
-	// Name is the name of the component.
-	Name string `json:"name"`
-	// Version is the version of the component.
-	Version string `json:"version"`
-	// ComponentReferences is a list of references to other components that this component depends on.
-	ComponentReferences []ComponentReference `json:"componentReferences"`
-	// Resources is a list of resources associated with this component, including their names, versions, types, and access information.
-	Resources []Resource `json:"resources"`
-}
-
-// ComponentReference represents a reference to another component, including its name, version, and the name of the component it refers to.
-type ComponentReference struct {
-	// Name is the name of the component reference.
-	Name string `json:"name"`
-	// Version is the version of the component reference.
-	Version string `json:"version"`
-	// ComponentName is the name of the component that this reference points to.
-	ComponentName string `json:"componentName"`
-}
-
-// Resource represents a resource associated with a component, including its name, version, type, and access information.
-type Resource struct {
-	// Name is the name of the resource.
-	Name string `json:"name"`
-	// Version is the version of the resource.
-	Version string `json:"version"`
-	// Type is the content type of the resource.
-	Type string `json:"type"`
-	// Access contains the information on how to access the resource.
-	Access Access `json:"access"`
-}
-
-// Access represents the access information for a resource, including the type of access.
-type Access struct {
-	// Type specifies the access type of the resource.
-	Type string `json:"type"`
-	// ImageReference is the reference to the image if the Type is "ociArtifact".
-	ImageReference *string `json:"imageReference"`
-	// LocalReference specifies a component local access
-	LocalReference *string `json:"localReference"`
-	// MediaType is the media type of the resource
-	MediaType *string `json:"mediaType"`
+	descriptor.Descriptor
+	Repository string `json:"repository,omitempty"`
 }
 
 var (
@@ -144,17 +100,17 @@ var (
 )
 
 // GetResource retrieves a resource by its name from the component version.
-func (cv *ComponentVersion) GetResource(name string) (*Resource, error) {
-	for _, resource := range cv.Component.Resources {
-		if resource.Name == name {
-			return &resource, nil
+func (cv *ComponentVersion) GetResource(name string) (*descriptor.Resource, error) {
+	for i := range cv.Component.Resources {
+		if cv.Component.Resources[i].Name == name {
+			return &cv.Component.Resources[i], nil
 		}
 	}
 	return nil, fmt.Errorf("resource %s not found in component version %s", name, cv.Component.Name)
 }
 
-func (cv *ComponentVersion) GetResourcesByType(resourceType string) []Resource {
-	var resources []Resource
+func (cv *ComponentVersion) GetResourcesByType(resourceType string) []descriptor.Resource {
+	var resources []descriptor.Resource
 	for _, resource := range cv.Component.Resources {
 		if resource.Type == resourceType {
 			resources = append(resources, resource)
@@ -164,15 +120,30 @@ func (cv *ComponentVersion) GetResourcesByType(resourceType string) []Resource {
 }
 
 // GetComponentReferences retrieves component references by its name from the component version.
-func (cv *ComponentVersion) GetComponentReferences(name string) []ComponentReference {
-	references := make([]ComponentReference, 0)
+func (cv *ComponentVersion) GetComponentReferences(name string) []descriptor.Reference {
+	references := make([]descriptor.Reference, 0)
 
-	for _, ref := range cv.Component.ComponentReferences {
+	for _, ref := range cv.Component.References {
 		if ref.Name == name {
 			references = append(references, ref)
 		}
 	}
 	return references
+}
+
+// ImageReference returns the OCI image reference of a resource with an OCI image access (ociArtifact, OCIImage, ...).
+func ImageReference(res *descriptor.Resource) (string, error) {
+	if res.Access == nil {
+		return "", fmt.Errorf("resource %s has no access", res.Name)
+	}
+	var img ociaccessv1.OCIImage
+	if err := ociaccess.Scheme.Convert(res.Access, &img); err != nil {
+		return "", fmt.Errorf("resource %s access of type %s is not an OCI image access: %w", res.Name, res.Access.Type, err)
+	}
+	if img.ImageReference == "" {
+		return "", fmt.Errorf("resource %s access of type %s has no imageReference", res.Name, res.Access.Type)
+	}
+	return img.ImageReference, nil
 }
 
 // ListComponentVersions lists all versions of the component of cv in its repository, sorted ascending by semver.

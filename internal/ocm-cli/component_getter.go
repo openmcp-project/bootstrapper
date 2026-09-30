@@ -99,7 +99,7 @@ func (g *ComponentGetter) GetReferencedComponentVersions(ctx context.Context, pa
 	componentVersions := make([]ComponentVersion, 0, len(refs))
 
 	for _, ref := range refs {
-		location := buildLocation(g.repo, ref.ComponentName, ref.Version)
+		location := buildLocation(g.repo, ref.Component, ref.Version)
 		cv, err := GetComponentVersion(ctx, location, g.ocmConfig)
 		if err != nil {
 			return nil, fmt.Errorf("error getting component version %s: %w", location, err)
@@ -126,7 +126,7 @@ func (g *ComponentGetter) GetReferencedComponentVersionsRecursive(ctx context.Co
 	}
 
 	// If not found, search recursively in all component references
-	for _, componentRef := range parentCV.Component.ComponentReferences {
+	for _, componentRef := range parentCV.Component.References {
 		subCVs, err := g.GetReferencedComponentVersions(ctx, parentCV, componentRef.Name)
 		if err != nil || len(subCVs) == 0 {
 			continue
@@ -153,7 +153,7 @@ func (g *ComponentGetter) GetComponentVersionsForResourceRecursive(ctx context.C
 	}
 
 	// If not found, search recursively in all component references
-	for _, componentRef := range parentCV.Component.ComponentReferences {
+	for _, componentRef := range parentCV.Component.References {
 		subCVs, err := g.GetReferencedComponentVersions(ctx, parentCV, componentRef.Name)
 		if err != nil || len(subCVs) == 0 {
 			continue

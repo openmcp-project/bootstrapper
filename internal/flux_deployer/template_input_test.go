@@ -1,10 +1,13 @@
 package flux_deployer_test
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"k8s.io/utils/ptr"
+	"github.com/stretchr/testify/require"
+	descriptor "ocm.software/open-component-model/bindings/go/descriptor/v2"
+	ocmruntime "ocm.software/open-component-model/bindings/go/runtime"
 
 	"github.com/openmcp-project/bootstrapper/internal/config"
 	"github.com/openmcp-project/bootstrapper/internal/flux_deployer"
@@ -58,18 +61,14 @@ func TestNewTemplateInputFromConfig(t *testing.T) {
 }
 
 func TestTemplateInput_AddImageResource(t *testing.T) {
-	cv := &ocm_cli.ComponentVersion{
-		Component: ocm_cli.Component{
-			Resources: []ocm_cli.Resource{
-				{
-					Name: "test-resource",
-					Access: ocm_cli.Access{
-						ImageReference: ptr.To("test-image:v1.0.0@sha256:123456789abcdef"),
-					},
-				},
-			},
-		},
-	}
+	access := &ocmruntime.Raw{}
+	require.NoError(t, json.Unmarshal([]byte(`{"type":"ociArtifact","imageReference":"test-image:v1.0.0@sha256:123456789abcdef"}`), access))
+
+	res := descriptor.Resource{Access: access}
+	res.Name = "test-resource"
+
+	cv := &ocm_cli.ComponentVersion{}
+	cv.Component.Resources = []descriptor.Resource{res}
 
 	ti := flux_deployer.TemplateInput{}
 	err := ti.AddImageResource(cv, "test-resource", "testKey")
