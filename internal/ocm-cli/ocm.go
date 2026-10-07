@@ -1,21 +1,28 @@
 package ocm_cli
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"sync"
 
-	yaml2 "k8s.io/apimachinery/pkg/util/yaml"
+	"github.com/Masterminds/semver/v3"
+	descriptor "ocm.software/open-component-model/bindings/go/descriptor/v2"
+	ociaccess "ocm.software/open-component-model/bindings/go/oci/spec/access"
+	ociaccessv1 "ocm.software/open-component-model/bindings/go/oci/spec/access/v1"
 	"sigs.k8s.io/yaml"
 )
 
 const (
 	// NoOcmConfig is a constant to indicate that no OCM configuration file is being provided.
 	NoOcmConfig = ""
+
+	// flagOutput is the OCM CLI flag selecting the output format or output path.
+	flagOutput = "--output"
 )
 
 // Execute runs the specified OCM command with the provided arguments and configuration.
@@ -70,75 +77,22 @@ func ExecuteOutput(ctx context.Context, commands []string, args []string, ocmCon
 	ocmArgs = append(ocmArgs, commands...)
 	ocmArgs = append(ocmArgs, args...)
 
+	// Only stdout carries the command result; the OCM CLI v2 writes its logs to stderr.
+	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, "ocm", ocmArgs...)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("error executing ocm command: %w, %q", err, out)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("error executing ocm command: %w, %q", err, stderr.String())
 	}
 
-	if cmd.ProcessState.ExitCode() != 0 {
-		return nil, fmt.Errorf("ocm command exited with code %d: %q", cmd.ProcessState.ExitCode(), out)
-	}
-
-	return out, nil
+	return stdout.Bytes(), nil
 }
 
-// ComponentVersion represents a version of an OCM component.
+// ComponentVersion is an OCM component descriptor together with the repository it was read from.
 type ComponentVersion struct {
-	// Component is the OCM component associated with this version.
-	Component  Component `json:"component"`
-	Repository string    `json:"repository,omitempty"`
-}
-
-// Component represents an OCM component with its name, version, references to other components, and resources.
-type Component struct {
-	// Name is the name of the component.
-	Name string `json:"name"`
-	// Version is the version of the component.
-	Version string `json:"version"`
-	// ComponentReferences is a list of references to other components that this component depends on.
-	ComponentReferences []ComponentReference `json:"componentReferences"`
-	// Resources is a list of resources associated with this component, including their names, versions, types, and access information.
-	Resources []Resource `json:"resources"`
-}
-
-// ComponentReference represents a reference to another component, including its name, version, and the name of the component it refers to.
-type ComponentReference struct {
-	// Name is the name of the component reference.
-	Name string `json:"name"`
-	// Version is the version of the component reference.
-	Version string `json:"version"`
-	// ComponentName is the name of the component that this reference points to.
-	ComponentName string `json:"componentName"`
-}
-
-// Resource represents a resource associated with a component, including its name, version, type, and access information.
-type Resource struct {
-	// Name is the name of the resource.
-	Name string `json:"name"`
-	// Version is the version of the resource.
-	Version string `json:"version"`
-	// Type is the content type of the resource.
-	Type string `json:"type"`
-	// Access contains the information on how to access the resource.
-	Access Access `json:"access"`
-}
-
-// Access represents the access information for a resource, including the type of access.
-type Access struct {
-	// Type specifies the access type of the resource.
-	Type string `json:"type"`
-	// ImageReference is the reference to the image if the Type is "ociArtifact".
-	ImageReference *string `json:"imageReference"`
-	// LocalReference specifies a component local access
-	LocalReference *string `json:"localReference"`
-	// MediaType is the media type of the resource
-	MediaType *string `json:"mediaType"`
-}
-
-type ComponentListEntry struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
+	descriptor.Descriptor
+	Repository string `json:"repository,omitempty"`
 }
 
 var (
@@ -146,17 +100,17 @@ var (
 )
 
 // GetResource retrieves a resource by its name from the component version.
-func (cv *ComponentVersion) GetResource(name string) (*Resource, error) {
-	for _, resource := range cv.Component.Resources {
-		if resource.Name == name {
-			return &resource, nil
+func (cv *ComponentVersion) GetResource(name string) (*descriptor.Resource, error) {
+	for i := range cv.Component.Resources {
+		if cv.Component.Resources[i].Name == name {
+			return &cv.Component.Resources[i], nil
 		}
 	}
 	return nil, fmt.Errorf("resource %s not found in component version %s", name, cv.Component.Name)
 }
 
-func (cv *ComponentVersion) GetResourcesByType(resourceType string) []Resource {
-	var resources []Resource
+func (cv *ComponentVersion) GetResourcesByType(resourceType string) []descriptor.Resource {
+	var resources []descriptor.Resource
 	for _, resource := range cv.Component.Resources {
 		if resource.Type == resourceType {
 			resources = append(resources, resource)
@@ -166,10 +120,10 @@ func (cv *ComponentVersion) GetResourcesByType(resourceType string) []Resource {
 }
 
 // GetComponentReferences retrieves component references by its name from the component version.
-func (cv *ComponentVersion) GetComponentReferences(name string) []ComponentReference {
-	references := make([]ComponentReference, 0)
+func (cv *ComponentVersion) GetComponentReferences(name string) []descriptor.Reference {
+	references := make([]descriptor.Reference, 0)
 
-	for _, ref := range cv.Component.ComponentReferences {
+	for _, ref := range cv.Component.References {
 		if ref.Name == name {
 			references = append(references, ref)
 		}
@@ -177,29 +131,49 @@ func (cv *ComponentVersion) GetComponentReferences(name string) []ComponentRefer
 	return references
 }
 
-func (cv *ComponentVersion) ListComponentVersions(ctx context.Context, ocmConfig string) ([]string, error) {
+// ImageReference returns the OCI image reference of a resource with an OCI image access (ociArtifact, OCIImage, ...).
+func ImageReference(res *descriptor.Resource) (string, error) {
+	if res.Access == nil {
+		return "", fmt.Errorf("resource %s has no access", res.Name)
+	}
+	var img ociaccessv1.OCIImage
+	if err := ociaccess.Scheme.Convert(res.Access, &img); err != nil {
+		return "", fmt.Errorf("resource %s access of type %s is not an OCI image access: %w", res.Name, res.Access.Type, err)
+	}
+	if img.ImageReference == "" {
+		return "", fmt.Errorf("resource %s access of type %s has no imageReference", res.Name, res.Access.Type)
+	}
+	return img.ImageReference, nil
+}
 
-	out, err := ExecuteOutput(ctx, []string{"list", "componentversion", cv.Repository + "//" + cv.Component.Name}, []string{"--output", "yaml"}, ocmConfig)
+// ListComponentVersions lists all versions of the component of cv in its repository, sorted ascending by semver.
+func (cv *ComponentVersion) ListComponentVersions(ctx context.Context, ocmConfig string) ([]string, error) {
+	out, err := ExecuteOutput(ctx, []string{"get", "componentversions", cv.Repository + "//" + cv.Component.Name}, []string{flagOutput, "yaml"}, ocmConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	cvList := make([]string, 0)
-	decoder := yaml2.NewYAMLOrJSONDecoder(strings.NewReader(string(out)), 1024)
-	for {
-		var entry ComponentListEntry
-		err = decoder.Decode(&entry)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, fmt.Errorf("error decoding component version list: %w", err)
-		}
-		cvList = append(cvList, entry.Version)
+	var cvs []ComponentVersion
+	if err = yaml.Unmarshal(out, &cvs); err != nil {
+		return nil, fmt.Errorf("error decoding component version list: %w", err)
 	}
 
-	return cvList, nil
+	versions := make([]*semver.Version, 0, len(cvs))
+	for _, entry := range cvs {
+		v, err := semver.NewVersion(entry.Component.Version)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing component version %q: %w", entry.Component.Version, err)
+		}
+		versions = append(versions, v)
+	}
+	// The OCM CLI v2 lists versions in descending order; callers expect ascending order.
+	slices.SortFunc(versions, func(a, b *semver.Version) int { return a.Compare(b) })
 
+	cvList := make([]string, 0, len(versions))
+	for _, v := range versions {
+		cvList = append(cvList, v.Original())
+	}
+	return cvList, nil
 }
 
 // cvCache memoizes GetComponentVersion results for the lifetime of the process.
@@ -219,16 +193,20 @@ func GetComponentVersion(ctx context.Context, componentReference string, ocmConf
 		return &cv, nil
 	}
 
-	out, err := ExecuteOutput(ctx, []string{"get", "componentversion", componentReference}, []string{"--output", "yaml"}, ocmConfig)
+	out, err := ExecuteOutput(ctx, []string{"get", "componentversion", componentReference}, []string{flagOutput, "yaml"}, ocmConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	var cv ComponentVersion
-	err = yaml.Unmarshal(out, &cv)
-	if err != nil {
+	// The OCM CLI v2 always prints a list, even for a single version-pinned reference.
+	var cvs []ComponentVersion
+	if err = yaml.Unmarshal(out, &cvs); err != nil {
 		return nil, fmt.Errorf("error unmarshalling component version: %w", err)
 	}
+	if len(cvs) != 1 {
+		return nil, fmt.Errorf("expected exactly one component version for %s, got %d", componentReference, len(cvs))
+	}
+	cv := cvs[0]
 
 	cv.Repository = strings.SplitN(componentReference, "//", 2)[0]
 

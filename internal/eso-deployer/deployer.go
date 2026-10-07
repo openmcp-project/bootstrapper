@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	descriptor "ocm.software/open-component-model/bindings/go/descriptor/v2"
 
 	"github.com/openmcp-project/bootstrapper/internal/component"
 	cfg "github.com/openmcp-project/bootstrapper/internal/config"
@@ -86,8 +87,12 @@ func (d *EsoDeployer) DeployWithComponentManager(ctx context.Context, componentM
 	return nil
 }
 
-func (d *EsoDeployer) deployHelmRelease(ctx context.Context, res *ocmcli.Resource) error {
-	name, tag, _, err := util.ParseImageVersionAndTag(*res.Access.ImageReference)
+func (d *EsoDeployer) deployHelmRelease(ctx context.Context, res *descriptor.Resource) error {
+	imageRef, err := ocmcli.ImageReference(res)
+	if err != nil {
+		return err
+	}
+	name, tag, _, err := util.ParseImageVersionAndTag(imageRef)
 	if err != nil {
 		return fmt.Errorf("failed to parse image resource: %w", err)
 	}
@@ -128,8 +133,12 @@ func (d *EsoDeployer) deployHelmRelease(ctx context.Context, res *ocmcli.Resourc
 	return util.CreateOrUpdate(ctx, d.platformCluster, helmRelease)
 }
 
-func (d *EsoDeployer) deployRepo(ctx context.Context, res *ocmcli.Resource, repoName string) error {
-	name, tag, digest, err := util.ParseImageVersionAndTag(*res.Access.ImageReference)
+func (d *EsoDeployer) deployRepo(ctx context.Context, res *descriptor.Resource, repoName string) error {
+	imageRef, err := ocmcli.ImageReference(res)
+	if err != nil {
+		return err
+	}
+	name, tag, digest, err := util.ParseImageVersionAndTag(imageRef)
 	if err != nil {
 		return err
 	}

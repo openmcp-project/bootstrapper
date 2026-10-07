@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-git/v5"
+	descriptor "ocm.software/open-component-model/bindings/go/descriptor/v2"
 
 	"github.com/openmcp-project/bootstrapper/internal/config"
 
@@ -185,10 +186,14 @@ func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, 
 		if err != nil {
 			return fmt.Errorf("failed to get image resource for cluster provider %s: %w", cp, err)
 		}
+		image, err := ocmcli.ImageReference(imageResource)
+		if err != nil {
+			return fmt.Errorf("failed to get image reference for cluster provider %s: %w", cp.Name, err)
+		}
 
 		opts := &ProviderOptions{
 			Name:             cp.Name,
-			Image:            *imageResource.Access.ImageReference,
+			Image:            image,
 			ImagePullSecrets: imagePullSecrets,
 			Config:           cp.ConfigParsed,
 		}
@@ -212,10 +217,14 @@ func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, 
 		if err != nil {
 			return fmt.Errorf("failed to get image resource for service provider %s: %w", sp, err)
 		}
+		image, err := ocmcli.ImageReference(imageResource)
+		if err != nil {
+			return fmt.Errorf("failed to get image reference for service provider %s: %w", sp.Name, err)
+		}
 
 		opts := &ProviderOptions{
 			Name:             sp.Name,
-			Image:            *imageResource.Access.ImageReference,
+			Image:            image,
 			ImagePullSecrets: imagePullSecrets,
 			Config:           sp.ConfigParsed,
 		}
@@ -239,10 +248,14 @@ func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, 
 		if err != nil {
 			return fmt.Errorf("failed to get image resource for platform service %s: %w", ps, err)
 		}
+		image, err := ocmcli.ImageReference(imageResource)
+		if err != nil {
+			return fmt.Errorf("failed to get image reference for platform service %s: %w", ps.Name, err)
+		}
 
 		opts := &ProviderOptions{
 			Name:             ps.Name,
-			Image:            *imageResource.Access.ImageReference,
+			Image:            image,
 			ImagePullSecrets: imagePullSecrets,
 			Config:           ps.ConfigParsed,
 		}
@@ -256,7 +269,7 @@ func TemplateProviders(ctx context.Context, clusterProviders, serviceProviders, 
 	return nil
 }
 
-func getImageResource(cv *ocmcli.ComponentVersion) (*ocmcli.Resource, error) {
+func getImageResource(cv *ocmcli.ComponentVersion) (*descriptor.Resource, error) {
 	resources := cv.GetResourcesByType(ocmcli.OCIImageResourceType)
 
 	if len(resources) > 0 {

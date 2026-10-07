@@ -34,9 +34,13 @@ func (t TemplateInput) AddImageResource(cv *ocmcli.ComponentVersion, resourceNam
 	if err != nil {
 		return fmt.Errorf("failed to get resource %s: %w", resourceName, err)
 	}
-	imageName, imageTag, imageDigest, err := util.ParseImageVersionAndTag(*resource.Access.ImageReference)
+	imageRef, err := ocmcli.ImageReference(resource)
 	if err != nil {
-		return fmt.Errorf("failed to parse image reference %s: %w", *resource.Access.ImageReference, err)
+		return fmt.Errorf("failed to get image reference of resource %s: %w", resourceName, err)
+	}
+	imageName, imageTag, imageDigest, err := util.ParseImageVersionAndTag(imageRef)
+	if err != nil {
+		return fmt.Errorf("failed to parse image reference %s: %w", imageRef, err)
 	}
 
 	if _, found := t["images"]; !found {

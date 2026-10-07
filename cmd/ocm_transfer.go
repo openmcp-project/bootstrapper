@@ -33,6 +33,8 @@ var ocmTransferCmd = &cobra.Command{
 		transferArgs := []string{
 			"--recursive",
 			"--copy-resources",
+			// keep OCI image resources as ociArtifact accesses so their imageReference stays usable
+			"--upload-as", "ociArtifact",
 			args[0], // source
 			args[1], // target
 		}

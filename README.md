@@ -18,7 +18,7 @@ Supported global flags:
 
 The `ocm-transfer` command is used to transfer an OCM component version from a source location to a target location.
 The `ocm-transfer` requires the following parameters:
-* `source`: The source location of the OCM component version to be transferred.
+* `source`: The source location of the OCM component version to be transferred, in the format `<OCM Registry Location>//<Component Name>:<version>`.
 * `target`: The target location where the OCM component version should be transferred to.
 
 Optional parameters:
@@ -28,10 +28,10 @@ Optional parameters:
 openmcp-bootstrapper ocm-transfer <source-location> <target-location> --config <path-to-ocm-config>
 ```
 
-This command internally calls the OCM cli with the following command and arguments:
+This command internally calls the [OCM CLI v2](https://github.com/open-component-model/open-component-model) with the following command and arguments:
 
 ```shell
-ocm --config <path-to-ocm-config> transfer componentversion --recursive --copy-resources --copy-sources <source-location> <target-location>
+ocm --config <path-to-ocm-config> transfer componentversion --recursive --copy-resources --upload-as ociArtifact <source-location> <target-location>
 ```
 
 Example:
