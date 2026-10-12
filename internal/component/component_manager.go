@@ -11,6 +11,7 @@ import (
 type ComponentManager interface {
 	GetComponentsWithImageResources(ctx context.Context, resourceName string) ([]ocm_cli.ComponentVersion, error)
 	DownloadTemplatesResource(ctx context.Context, downloadDir string) error
+	GetComponentReferences(ctx context.Context, referenceName string) ([]ocm_cli.ComponentVersion, error)
 }
 
 type ComponentManagerImpl struct {
@@ -41,4 +42,8 @@ func (m *ComponentManagerImpl) GetComponentsWithImageResources(ctx context.Conte
 
 func (m *ComponentManagerImpl) DownloadTemplatesResource(ctx context.Context, downloadDir string) error {
 	return m.ComponentGetter.DownloadTemplatesResource(ctx, downloadDir)
+}
+
+func (m *ComponentManagerImpl) GetComponentReferences(ctx context.Context, referenceName string) ([]ocm_cli.ComponentVersion, error) {
+	return m.ComponentGetter.GetReferencedComponentVersionsRecursive(ctx, m.ComponentGetter.RootComponentVersion(), referenceName)
 }

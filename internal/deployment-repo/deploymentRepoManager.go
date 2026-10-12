@@ -28,12 +28,13 @@ import (
 
 const (
 	OpenMCPOperatorComponentName              = "openmcp-operator"
-	FluxCDSourceControllerResourceName        = "fluxcd-source-controller"
-	FluxCDKustomizationControllerResourceName = "fluxcd-kustomize-controller"
-	FluxCDHelmControllerResourceName          = "fluxcd-helm-controller"
-	FluxCDNotificationControllerName          = "fluxcd-notification-controller"
-	FluxCDImageReflectorControllerName        = "fluxcd-image-reflector-controller"
-	FluxCDImageAutomationControllerName       = "fluxcd-image-automation-controller"
+	FluxCDComponentReference                  = "flux"
+	FluxCDSourceControllerResourceName        = "image-source-controller"
+	FluxCDKustomizationControllerResourceName = "image-kustomize-controller"
+	FluxCDHelmControllerResourceName          = "image-helm-controller"
+	FluxCDNotificationControllerName          = "image-notification-controller"
+	FluxCDImageReflectorControllerName        = "image-reflector-controller"
+	FluxCDImageAutomationControllerName       = "image-automation-controller"
 
 	EnvsDirectoryName       = "envs"
 	ResourcesDirectoryName  = "resources"
@@ -164,14 +165,22 @@ func (m *DeploymentRepoManager) Initialize(ctx context.Context) (*DeploymentRepo
 	}
 	m.openMCPOperatorCV = &openMCPOperatorCVs[0]
 
-	fluxcdCVs, err := m.compGetter.GetComponentVersionsForResourceRecursive(ctx, m.compGetter.RootComponentVersion(), FluxCDSourceControllerResourceName)
+	fluxcdCVs, err := m.compGetter.GetReferencedComponentVersionsRecursive(ctx, m.compGetter.RootComponentVersion(), FluxCDComponentReference)
 	if err != nil {
-		return m, fmt.Errorf("failed to get fluxcd source controller component version: %w", err)
+		return m, fmt.Errorf("failed to get fluxcd component version: %w", err)
 	}
-	if len(fluxcdCVs) != 1 {
-		return m, fmt.Errorf("expected exactly one fluxcd source controller component version, got %d", len(fluxcdCVs))
+	if len(fluxcdCVs) == 0 {
+		return m, fmt.Errorf("no fluxcd component version found")
 	}
-	m.fluxcdCV = &fluxcdCVs[0]
+	fluxcdCVs = ocmcli.FilterComponentVersionsByLabel(fluxcdCVs, []ocmcli.Label{{Name: ocmcli.DeprecatedLabel, Value: "true"}}, false)
+	if len(fluxcdCVs) == 0 {
+		return m, fmt.Errorf("no non-deprecated fluxcd component version found")
+	}
+	latestFluxcdCV, err := ocmcli.LatestComponentVersion(fluxcdCVs)
+	if err != nil {
+		return m, fmt.Errorf("failed to determine latest fluxcd component version: %w", err)
+	}
+	m.fluxcdCV = latestFluxcdCV
 
 	m.gitConfig, err = gitconfig.ParseConfig(m.GitConfigPath)
 	if err != nil {
@@ -331,6 +340,9 @@ func applyFluxCDTemplateInput(templateInput map[string]interface{}, fluxcdCV *oc
 	fluxSourceControllerImageResource, err := fluxcdCV.GetResource(fluxResource)
 	if err != nil {
 		return fmt.Errorf("failed to get fluxcd resource %s: %w", fluxResource, err)
+	}
+	if fluxSourceControllerImageResource.Access.ImageReference == nil {
+		return fmt.Errorf("failed to get fluxcd image reference %s: image reference missing", fluxResource)
 	}
 	imageName, imageTag, imageDigest, err := util.ParseImageVersionAndTag(*fluxSourceControllerImageResource.Access.ImageReference)
 	if err != nil {

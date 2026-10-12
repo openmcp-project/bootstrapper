@@ -8,13 +8,15 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	yaml2 "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/yaml"
 )
 
 const (
 	// NoOcmConfig is a constant to indicate that no OCM configuration file is being provided.
-	NoOcmConfig = ""
+	NoOcmConfig     = ""
+	DeprecatedLabel = "open-control-plane.io/deprecated"
 )
 
 // Execute runs the specified OCM command with the provided arguments and configuration.
@@ -89,12 +91,20 @@ type ComponentVersion struct {
 	Repository string    `json:"repository,omitempty"`
 }
 
+// Label represents a single OCM label with a name and a value.
+type Label struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 // Component represents an OCM component with its name, version, references to other components, and resources.
 type Component struct {
 	// Name is the name of the component.
 	Name string `json:"name"`
 	// Version is the version of the component.
 	Version string `json:"version"`
+	// Labels are the labels of the component.
+	Labels []Label `json:"labels,omitempty"`
 	// ComponentReferences is a list of references to other components that this component depends on.
 	ComponentReferences []ComponentReference `json:"componentReferences"`
 	// Resources is a list of resources associated with this component, including their names, versions, types, and access information.
@@ -174,6 +184,23 @@ func (cv *ComponentVersion) GetComponentReferences(name string) []ComponentRefer
 		}
 	}
 	return references
+}
+
+// labelsMatch reports whether all entries in required are present with equal values in actual.
+func labelsMatch(actual []Label, required []Label) bool {
+	for _, req := range required {
+		found := false
+		for _, a := range actual {
+			if a.Name == req.Name && a.Value == req.Value {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 func (cv *ComponentVersion) ListComponentVersions(ctx context.Context, ocmConfig string) ([]string, error) {
@@ -266,4 +293,36 @@ func verifyOCMConfig(ocmConfig string) error {
 	}
 
 	return nil
+}
+
+// LatestComponentVersion returns a pointer to the component version with the highest semver among cvs.
+func LatestComponentVersion(cvs []ComponentVersion) (*ComponentVersion, error) {
+	var latest *ComponentVersion
+	var latestSemver *semver.Version
+	for i := range cvs {
+		v, err := semver.NewVersion(cvs[i].Component.Version)
+		if err != nil {
+			return nil, fmt.Errorf("invalid semver %q for component %s: %w", cvs[i].Component.Version, cvs[i].Component.Name, err)
+		}
+		if latestSemver == nil || v.GreaterThan(latestSemver) {
+			latestSemver = v
+			latest = &cvs[i]
+		}
+	}
+	return latest, nil
+}
+
+// FilterComponentVersionsByLabel returns the subset of cvs whose labels satisfy the predicate for every
+// label in the provided slice.
+// If requireLabel is true, only component versions that have all specified labels with matching values are returned.
+// If requireLabel is false, only component versions that have none of the specified labels (or have them with different values) are returned.
+func FilterComponentVersionsByLabel(cvs []ComponentVersion, labels []Label, requireLabel bool) []ComponentVersion {
+	result := make([]ComponentVersion, 0, len(cvs))
+	for _, cv := range cvs {
+		matches := labelsMatch(cv.Component.Labels, labels)
+		if matches == requireLabel {
+			result = append(result, cv)
+		}
+	}
+	return result
 }
