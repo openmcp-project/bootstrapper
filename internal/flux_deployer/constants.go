@@ -16,11 +16,13 @@ const (
 	TemplatesDirectoryName = "templates"
 	OverlaysDirectoryName  = "overlays"
 
+	FluxCDComponentReference = "flux"
+
 	// Resource names
-	FluxCDSourceControllerResourceName        = "fluxcd-source-controller"
-	FluxCDKustomizationControllerResourceName = "fluxcd-kustomize-controller"
-	FluxCDHelmControllerResourceName          = "fluxcd-helm-controller"
-	FluxCDNotificationControllerName          = "fluxcd-notification-controller"
-	FluxCDImageReflectorControllerName        = "fluxcd-image-reflector-controller"
-	FluxCDImageAutomationControllerName       = "fluxcd-image-automation-controller"
+	FluxCDSourceControllerResourceName        = "image-source-controller"
+	FluxCDKustomizationControllerResourceName = "image-kustomize-controller"
+	FluxCDHelmControllerResourceName          = "image-helm-controller"
+	FluxCDNotificationControllerName          = "image-notification-controller"
+	FluxCDImageReflectorControllerName        = "image-reflector-controller"
+	FluxCDImageAutomationControllerName       = "image-automation-controller"
 )

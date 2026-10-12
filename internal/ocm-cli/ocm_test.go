@@ -77,6 +77,64 @@ func TestExecute(t *testing.T) {
 	}
 }
 
+func TestFilterComponentVersionsByLabel(t *testing.T) {
+	cvs := []ocmcli.ComponentVersion{
+		{Component: ocmcli.Component{Name: "a", Version: "v1.0.0", Labels: []ocmcli.Label{{Name: "env", Value: "prod"}, {Name: "team", Value: "alpha"}}}},
+		{Component: ocmcli.Component{Name: "b", Version: "v1.1.0", Labels: []ocmcli.Label{{Name: "env", Value: "prod"}}}},
+		{Component: ocmcli.Component{Name: "c", Version: "v1.2.0", Labels: []ocmcli.Label{{Name: "env", Value: "staging"}}}},
+		{Component: ocmcli.Component{Name: "d", Version: "v1.3.0", Labels: nil}},
+	}
+
+	testCases := []struct {
+		desc          string
+		filter        []ocmcli.Label
+		requireLabel  bool
+		expectedNames []string
+	}{
+		{
+			desc:          "require single label match",
+			filter:        []ocmcli.Label{{Name: "env", Value: "prod"}},
+			requireLabel:  true,
+			expectedNames: []string{"a", "b"},
+		},
+		{
+			desc:          "require multiple label match",
+			filter:        []ocmcli.Label{{Name: "env", Value: "prod"}, {Name: "team", Value: "alpha"}},
+			requireLabel:  true,
+			expectedNames: []string{"a"},
+		},
+		{
+			desc:          "exclude single label match",
+			filter:        []ocmcli.Label{{Name: "env", Value: "prod"}},
+			requireLabel:  false,
+			expectedNames: []string{"c", "d"},
+		},
+		{
+			desc:          "require label not present in any cv",
+			filter:        []ocmcli.Label{{Name: "env", Value: "canary"}},
+			requireLabel:  true,
+			expectedNames: []string{},
+		},
+		{
+			desc:          "empty filter with require returns all",
+			filter:        []ocmcli.Label{},
+			requireLabel:  true,
+			expectedNames: []string{"a", "b", "c", "d"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			result := ocmcli.FilterComponentVersionsByLabel(cvs, tc.filter, tc.requireLabel)
+			names := make([]string, len(result))
+			for i, cv := range result {
+				names[i] = cv.Component.Name
+			}
+			assert.ElementsMatch(t, tc.expectedNames, names)
+		})
+	}
+}
+
 func TestGetComponentVersion(t *testing.T) {
 	expectError := errors.New("expected error")
 	testutil.DownloadOCMAndAddToPath(t)

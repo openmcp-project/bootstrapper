@@ -109,14 +109,22 @@ func (d *FluxDeployer) DeployWithComponentManager(ctx context.Context, component
 	d.log.Tracef("Created repo directory: %s", d.repoDir)
 
 	// Get component which contains the fluxcd images as resources
-	fluxcdCVs, err := componentManager.GetComponentsWithImageResources(ctx, FluxCDSourceControllerResourceName)
+	fluxcdCVs, err := componentManager.GetComponentReferences(ctx, FluxCDComponentReference)
 	if err != nil {
-		return fmt.Errorf("failed to get fluxcd source controller component version: %w", err)
+		return fmt.Errorf("failed to get fluxcd component version: %w", err)
 	}
-	if len(fluxcdCVs) != 1 {
-		return fmt.Errorf("expected exactly one fluxcd component version with resource %s, got %d", FluxCDSourceControllerResourceName, len(fluxcdCVs))
+	if len(fluxcdCVs) == 0 {
+		return fmt.Errorf("no fluxcd component version found")
 	}
-	d.fluxcdCV = &fluxcdCVs[0]
+	fluxcdCVs = ocmcli.FilterComponentVersionsByLabel(fluxcdCVs, []ocmcli.Label{{Name: ocmcli.DeprecatedLabel, Value: "true"}}, false)
+	if len(fluxcdCVs) == 0 {
+		return fmt.Errorf("no non-deprecated fluxcd component version found")
+	}
+	latestFluxcdCV, err := ocmcli.LatestComponentVersion(fluxcdCVs)
+	if err != nil {
+		return fmt.Errorf("failed to determine latest fluxcd component version: %w", err)
+	}
+	d.fluxcdCV = latestFluxcdCV
 
 	// Download resource from gitops-templates component into the download directory
 	d.log.Info("Downloading templates")

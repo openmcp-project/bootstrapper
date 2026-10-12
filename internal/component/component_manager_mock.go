@@ -31,6 +31,10 @@ func (m MockComponentManager) DownloadTemplatesResource(_ context.Context, downl
 	return util.CopyDir(m.TemplatesPath, downloadDir)
 }
 
+func (m MockComponentManager) GetComponentReferences(cxt context.Context, _ string) ([]ocmcli.ComponentVersion, error) {
+	return m.GetComponentsWithImageResources(cxt, "")
+}
+
 func loadComponentVersion(path string) (*ocmcli.ComponentVersion, error) {
 	cv := &ocmcli.ComponentVersion{}
 	content, err := os.ReadFile(path)

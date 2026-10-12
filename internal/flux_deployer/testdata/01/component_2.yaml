@@ -5,42 +5,42 @@ component:
     name: openmcp-project
 
   resources:
-    - name: fluxcd-source-controller
+    - name: image-source-controller
       version: v2.0.0
       type: ociImage
       access:
         type: ociArtifact
         imageReference: ghcr.io/fluxcd/source-controller:v2.0.0
 
-    - name: fluxcd-kustomize-controller
+    - name: image-kustomize-controller
       version: v2.0.1
       type: ociImage
       access:
         type: ociArtifact
         imageReference: ghcr.io/fluxcd/kustomize-controller:v2.0.1
 
-    - name: fluxcd-helm-controller
+    - name: image-helm-controller
       version: v2.0.2
       type: ociImage
       access:
         type: ociArtifact
         imageReference: ghcr.io/fluxcd/helm-controller:v2.0.2
 
-    - name: fluxcd-notification-controller
+    - name: image-notification-controller
       version: v2.0.3
       type: ociImage
       access:
         type: ociArtifact
         imageReference: ghcr.io/fluxcd/notification-controller:v2.0.3
 
-    - name: fluxcd-image-reflector-controller
+    - name: image-reflector-controller
       version: v2.0.4
       type: ociImage
       access:
         type: ociArtifact
         imageReference: ghcr.io/fluxcd/image-reflector-controller:v2.0.4
 
-    - name: fluxcd-image-automation-controller
+    - name: image-automation-controller
       version: v2.0.5
       type: ociImage
       access:
