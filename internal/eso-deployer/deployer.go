@@ -93,19 +93,19 @@ func (d *EsoDeployer) deployHelmRelease(ctx context.Context, res *ocmcli.Resourc
 	}
 
 	values := map[string]any{
-		"image": map[string]any{
-			"repository": name,
+		"image": map[string]any{ //nolint:goconst
+			"repository": name, //nolint:goconst
 			"tag":        tag,
 		},
 		"webhook": map[string]any{
-			"image": map[string]any{
-				"repository": name,
+			"image": map[string]any{ //nolint:goconst
+				"repository": name, //nolint:goconst
 			},
 			"imagePullSecrets": d.Config.ExternalSecrets.ImagePullSecrets,
 		},
 		"certController": map[string]any{
-			"image": map[string]any{
-				"repository": name,
+			"image": map[string]any{ //nolint:goconst
+				"repository": name, //nolint:goconst
 			},
 			"imagePullSecrets": d.Config.ExternalSecrets.ImagePullSecrets,
 		},
