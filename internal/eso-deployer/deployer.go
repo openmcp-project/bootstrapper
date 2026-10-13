@@ -97,6 +97,18 @@ func (d *EsoDeployer) deployHelmRelease(ctx context.Context, res *ocmcli.Resourc
 			"repository": name,
 			"tag":        tag,
 		},
+		"webhook": map[string]any{
+			"image": map[string]any{
+				"repository": name,
+			},
+			"imagePullSecrets": d.Config.ExternalSecrets.ImagePullSecrets,
+		},
+		"certController": map[string]any{
+			"image": map[string]any{
+				"repository": name,
+			},
+			"imagePullSecrets": d.Config.ExternalSecrets.ImagePullSecrets,
+		},
 	}
 	values["imagePullSecrets"] = d.Config.ExternalSecrets.ImagePullSecrets
 
