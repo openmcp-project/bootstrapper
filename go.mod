@@ -12,7 +12,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.9.2
 	github.com/go-git/go-git/v5 v5.19.3
 	github.com/go-logr/logr v1.4.4
-	github.com/openmcp-project/controller-utils v0.33.1
+	github.com/openmcp-project/controller-utils v0.33.2
 	github.com/sirupsen/logrus v1.10.2
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.12.1
@@ -43,7 +43,7 @@ require (
 	github.com/evanphx/json-patch v5.9.11+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
 	github.com/fluxcd/pkg/apis/acl v0.10.0 // indirect
-	github.com/fluxcd/pkg/apis/kustomize v1.20.0 // indirect
+	github.com/fluxcd/pkg/apis/kustomize v1.21.0 // indirect
 	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
 	github.com/go-errors/errors v1.5.1 // indirect
