@@ -50,27 +50,32 @@ func (d *EsoDeployer) Deploy(ctx context.Context) error {
 
 func (d *EsoDeployer) DeployWithComponentManager(ctx context.Context, componentManager component.ComponentManager) error {
 	d.log.Info("Getting OCM component containing ESO resources.")
-	esoComponents, err := componentManager.GetComponentsWithImageResources(ctx, "external-secrets-operator-image")
+
+	esoComponents, err := componentManager.GetComponentReferences(ctx, esoComponentReference)
 	if err != nil {
 		return fmt.Errorf("failed to get external-secrets-operator-image component: %w", err)
 	}
-	if len(esoComponents) != 1 {
-		return fmt.Errorf("expected exactly one component with external-secrets-operator-image resource, got %d", len(esoComponents))
+	if len(esoComponents) == 0 {
+		return fmt.Errorf("no ESO component version found")
 	}
-	esoComponent := &esoComponents[0]
-
-	esoChartRes, err := esoComponent.GetResource("external-secrets-operator-chart")
+	latestEsoComponent, err := ocmcli.LatestComponentVersion(esoComponents)
 	if err != nil {
-		return fmt.Errorf("failed to get external-secrets-operator-chart resource: %w", err)
+		return fmt.Errorf("failed to determine latest ESO component version: %w", err)
+	}
+	esoComponent := latestEsoComponent
+
+	esoChartRes, err := esoComponent.GetResource(esoHelmChartResourceName)
+	if err != nil {
+		return fmt.Errorf("failed to get ESO chart resource: %w", err)
 	}
 	d.log.Info("Deploying OCIRepo for ESO chart.")
 	if err = d.deployRepo(ctx, esoChartRes, esoChartRepoName); err != nil {
 		return fmt.Errorf("failed to create helm chart repo: %w", err)
 	}
 
-	esoImageRes, err := esoComponent.GetResource("external-secrets-operator-image")
+	esoImageRes, err := esoComponent.GetResource(esoImageResourceName)
 	if err != nil {
-		return fmt.Errorf("failed to get external-secrets-operator-image resource: %w", err)
+		return fmt.Errorf("failed to get ESO image resource: %w", err)
 	}
 	d.log.Info("Deploying OCIRepo for ESO image.")
 	if err = d.deployRepo(ctx, esoImageRes, esoImageRepoName); err != nil {
