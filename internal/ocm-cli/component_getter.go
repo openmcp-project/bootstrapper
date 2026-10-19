@@ -107,7 +107,9 @@ func (g *ComponentGetter) GetReferencedComponentVersions(ctx context.Context, pa
 		componentVersions = append(componentVersions, *cv)
 	}
 
-	logger.Tracef("Comp_Getter: Found component reference %s in component version %s", refName, parentCV.Component.Name)
+	if len(componentVersions) > 0 {
+		logger.Tracef("Comp_Getter: Found component reference %s in component version %s", refName, parentCV.Component.Name)
+	}
 	return componentVersions, nil
 }
 
