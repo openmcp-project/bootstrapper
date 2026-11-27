@@ -8,10 +8,11 @@ on:
 
 permissions:
   packages: write
+  id-token: write
 
 jobs:
   release_publish:
-    uses: openmcp-project/build/.github/workflows/publish.lib.yaml@6486af1a13b28090683a6a83b82d69cbaff789dc # main
+    uses: openmcp-project/build/.github/workflows/publish.lib.yaml@0f83bcd91133449b38e2dd21ab2f04ff0c0d3385 # main
     with:
       fips: false
     secrets: inherit
