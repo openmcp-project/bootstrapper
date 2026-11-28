@@ -9,7 +9,7 @@ ARG OCM_VERSION=0.55.0
 RUN curl -fsSL -o ocm.tar.gz https://github.com/open-component-model/ocm/releases/download/v$OCM_VERSION/ocm-$OCM_VERSION-$TARGETOS-$TARGETARCH.tar.gz \
     && tar -xzf ocm.tar.gz
 # renovate: datasource=github-releases depName=yq packageName=mikefarah/yq
-ARG YQ_VERSION=v4.53.3
+ARG YQ_VERSION=v4.54.3
 RUN curl -fsSL -o yq https://github.com/mikefarah/yq/releases/download/$YQ_VERSION/yq_${TARGETOS}_${TARGETARCH} \
     && chmod +x yq
 # renovate: datasource=github-releases depName=kubectl packageName=kubernetes/kubernetes
