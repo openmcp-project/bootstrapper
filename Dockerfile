@@ -13,7 +13,7 @@ ARG YQ_VERSION=v4.53.3
 RUN curl -fsSL -o yq https://github.com/mikefarah/yq/releases/download/$YQ_VERSION/yq_${TARGETOS}_${TARGETARCH} \
     && chmod +x yq
 # renovate: datasource=github-releases depName=kubectl packageName=kubernetes/kubernetes
-ARG KUBECTL_VERSION=v1.36.1
+ARG KUBECTL_VERSION=v1.37.2
 RUN curl -fsSL -o kubectl https://dl.k8s.io/release/$KUBECTL_VERSION/bin/$TARGETOS/$TARGETARCH/kubectl \
     && chmod +x kubectl
 
